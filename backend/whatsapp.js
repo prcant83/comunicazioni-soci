@@ -1,29 +1,23 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const path = require('path');
 
-const client = new Client({ authStrategy: new LocalAuth() });
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
+});
 
 client.on('qr', qr => {
-  qrcode.generate(qr, { small: true });
-  console.log('🔐 Scansiona il QR Code per accedere a WhatsApp');
+    qrcode.generate(qr, { small: true });
+    console.log('🔐 Scansiona il QR Code per accedere a WhatsApp');
 });
 
 client.on('ready', () => {
-  console.log('✅ WhatsApp client connesso e pronto');
+    console.log('✅ WhatsApp client connesso e pronto');
 });
 
 client.initialize();
 
-async function sendMessage(numero, messaggio, filePath = null) {
-  const chatId = numero + '@c.us';
-  if (filePath) {
-    const media = MessageMedia.fromFilePath(path.resolve(filePath));
-    await client.sendMessage(chatId, media, { caption: messaggio });
-  } else {
-    await client.sendMessage(chatId, messaggio);
-  }
-  return 'Messaggio inviato con successo';
-}
-
-module.exports = { sendMessage };
+module.exports = client;
