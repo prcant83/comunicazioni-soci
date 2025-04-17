@@ -2,39 +2,38 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Invio WhatsApp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invia WhatsApp</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="container">
-    <h1 class="title">📨 Invia Messaggi WhatsApp</h1>
-
-    <form id="whatsappForm" class="form">
+  <div class="container">
+    <h1>📱 Invia Messaggio WhatsApp</h1>
+    <form id="whatsappForm">
       <label for="rubrica">Rubrica:</label>
-      <select id="rubrica" name="rubrica" required>
-        <option value="">-- Seleziona una rubrica --</option>
+      <select id="rubrica" name="rubrica">
+        <option value="">-- Seleziona Rubrica --</option>
       </select>
 
       <label for="messaggio">Messaggio:</label>
-      <textarea id="messaggio" name="messaggio" rows="5" required placeholder="Scrivi qui il messaggio da inviare..."></textarea>
+      <textarea id="messaggio" name="messaggio" rows="4" placeholder="Scrivi qui il messaggio..."></textarea>
 
-      <button type="submit">Invia WhatsApp</button>
+      <button type="submit">📤 Invia WhatsApp</button>
     </form>
-
-    <div id="esito" class="result"></div>
-  </main>
+    <p id="risultato" class="status"></p>
+    <a href="index.html" class="back-link">← Torna alla Home</a>
+  </div>
 
   <script>
     async function caricaRubriche() {
-      const response = await fetch('/rubriche');
-      const rubriche = await response.json();
+      const res = await fetch('/rubriche');
+      const data = await res.json();
       const select = document.getElementById('rubrica');
-      rubriche.forEach(r => {
-        const option = document.createElement('option');
-        option.value = r;
-        option.textContent = r;
-        select.appendChild(option);
+      data.forEach(nome => {
+        const opzione = document.createElement('option');
+        opzione.value = nome;
+        opzione.textContent = nome;
+        select.appendChild(opzione);
       });
     }
 
@@ -49,13 +48,8 @@
         body: JSON.stringify({ rubrica, messaggio })
       });
 
-      const esito = document.getElementById('esito');
-      if (res.ok) {
-        esito.textContent = '✅ Messaggi inviati con successo.';
-      } else {
-        const err = await res.text();
-        esito.textContent = `❌ Errore: ${err}`;
-      }
+      const testo = await res.text();
+      document.getElementById('risultato').textContent = testo;
     });
 
     caricaRubriche();
