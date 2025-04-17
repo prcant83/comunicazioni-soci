@@ -1,0 +1,1 @@
+Il file soci.sqlite sarà generato al primo utilizzo del database.

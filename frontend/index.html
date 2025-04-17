@@ -1,1 +1,23 @@
-<!DOCTYPE html><html><body>Dashboard pronta</body></html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Comunicazioni Soci</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>📨 Dashboard Comunicazioni Soci</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="csv" accept=".csv">
+        <button type="submit">📥 Carica CSV</button>
+    </form>
+
+    <form id="emailForm">
+        <input type="text" name="subject" placeholder="Oggetto email">
+        <textarea name="html" placeholder="Contenuto MJML..."></textarea>
+        <button type="submit">📧 Invia Email</button>
+    </form>
+
+    <script src="script.js"></script>
+</body>
+</html>

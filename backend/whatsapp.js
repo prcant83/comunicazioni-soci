@@ -1,23 +1,31 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+let client;
 
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
-});
+function initializeWhatsapp() {
+    client = new Client({
+        authStrategy: new LocalAuth(),
+        puppeteer: { headless: true }
+    });
 
-client.on('qr', qr => {
-    qrcode.generate(qr, { small: true });
-    console.log('🔐 Scansiona il QR Code per accedere a WhatsApp');
-});
+    client.on('qr', qr => {
+        console.log('🔐 Scansiona il QR Code per accedere a WhatsApp');
+        qrcode.generate(qr, { small: true });
+    });
 
-client.on('ready', () => {
-    console.log('✅ WhatsApp client connesso e pronto');
-});
+    client.on('ready', () => {
+        console.log('✅ WhatsApp client connesso e pronto');
+    });
 
-client.initialize();
+    client.on('authenticated', () => {
+        console.log('🔑 Autenticazione WhatsApp avvenuta con successo');
+    });
 
-module.exports = client;
+    client.on('disconnected', () => {
+        console.log('⚠️ Disconnesso da WhatsApp');
+    });
+
+    client.initialize();
+}
+
+module.exports = { initializeWhatsapp };
