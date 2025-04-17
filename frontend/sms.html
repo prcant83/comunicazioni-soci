@@ -1,1 +1,55 @@
-<h1>Invio SMS</h1>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invio SMS</title>
+  <link rel="stylesheet" href="../assets/styles/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Invio SMS</h1>
+    <form id="smsForm">
+      <label for="rubrica">Rubrica:</label>
+      <select id="rubrica" name="rubrica"></select>
+
+      <label for="messaggio">Messaggio:</label>
+      <textarea id="messaggio" name="messaggio" rows="5" required></textarea>
+
+      <button type="submit">Invia SMS</button>
+    </form>
+    <div id="risultato"></div>
+  </div>
+
+  <script>
+    // Carica le rubriche disponibili
+    fetch('/rubriche')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('rubrica');
+        data.forEach(nome => {
+          const option = document.createElement('option');
+          option.value = nome;
+          option.textContent = nome;
+          select.appendChild(option);
+        });
+      });
+
+    // Gestione invio SMS
+    document.getElementById('smsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const rubrica = document.getElementById('rubrica').value;
+      const messaggio = document.getElementById('messaggio').value;
+
+      const res = await fetch('/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rubrica, messaggio })
+      });
+
+      const txt = await res.text();
+      document.getElementById('risultato').textContent = txt;
+    });
+  </script>
+</body>
+</html>
