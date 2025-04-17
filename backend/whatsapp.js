@@ -1,41 +1,34 @@
-// backend/whatsapp.js
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const { Client } = require('whatsapp-web.js');
-const fs = require('fs');
 
-const SESSION_FILE_PATH = './whatsapp-session.json';
-let client;
-
-async function startWhatsApp() {
-  let sessionData;
-  if (fs.existsSync(SESSION_FILE_PATH)) {
-    sessionData = require('../whatsapp-session.json');
+const client = new Client({
+  authStrategy: new LocalAuth(),
+  puppeteer: {
+    executablePath: '/usr/bin/chromium',
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   }
+});
 
-  client = new Client({
-    session: sessionData,
-    puppeteer: {
-      headless: true,
-      executablePath: '/usr/bin/chromium-browser',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    },
-  });
-
+function startWhatsApp() {
   client.on('qr', (qr) => {
     console.log('🔐 Scansiona il QR Code per accedere a WhatsApp');
     qrcode.generate(qr, { small: true });
-  });
-
-  client.on('authenticated', (session) => {
-    console.log('🔑 Autenticazione WhatsApp avvenuta con successo');
-    fs.writeFileSync(SESSION_FILE_PATH, JSON.stringify(session));
   });
 
   client.on('ready', () => {
     console.log('✅ WhatsApp client connesso e pronto');
   });
 
-  await client.initialize();
+  client.on('authenticated', () => {
+    console.log('🔑 Autenticazione WhatsApp avvenuta con successo');
+  });
+
+  client.on('auth_failure', (msg) => {
+    console.error('❌ Errore autenticazione:', msg);
+  });
+
+  client.initialize();
 }
 
 module.exports = { startWhatsApp };
