@@ -1,1 +1,85 @@
-<h1>Invio Email</h1>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invia Email</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1 class="title">📧 Invia Email</h1>
+
+    <form id="emailForm" class="form-section">
+      <label for="destinatario">Destinatario (email o rubrica):</label>
+      <select id="destinatario" name="destinatario">
+        <option value="">-- Seleziona rubrica --</option>
+        <option value="__singola__">📩 Email singola</option>
+      </select>
+
+      <div id="emailSingola" style="display:none;">
+        <label for="email">Email destinatario:</label>
+        <input type="email" id="email" name="email" />
+      </div>
+
+      <label for="oggetto">Oggetto:</label>
+      <input type="text" id="oggetto" name="oggetto" required />
+
+      <label for="messaggio">Messaggio:</label>
+      <textarea id="messaggio" name="messaggio" rows="6" required></textarea>
+
+      <button type="submit">📤 Invia Email</button>
+    </form>
+
+    <div id="esito" class="result"></div>
+  </main>
+
+  <script>
+    async function caricaRubriche() {
+      const response = await fetch('/rubriche');
+      const rubriche = await response.json();
+      const select = document.getElementById('destinatario');
+      rubriche.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = `📂 Rubrica: ${r}`;
+        select.appendChild(opt);
+      });
+    }
+
+    document.getElementById('destinatario').addEventListener('change', (e) => {
+      const emailSingola = document.getElementById('emailSingola');
+      if (e.target.value === '__singola__') {
+        emailSingola.style.display = 'block';
+      } else {
+        emailSingola.style.display = 'none';
+      }
+    });
+
+    document.getElementById('emailForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const rubrica = form.destinatario.value;
+      const to = rubrica === '__singola__' ? form.email.value : rubrica;
+      const subject = form.oggetto.value;
+      const message = form.messaggio.value;
+
+      const res = await fetch('/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, message })
+      });
+
+      const esito = document.getElementById('esito');
+      if (res.ok) {
+        esito.textContent = '✅ Email inviata con successo';
+      } else {
+        const err = await res.text();
+        esito.textContent = `❌ Errore: ${err}`;
+      }
+    });
+
+    caricaRubriche();
+  </script>
+</body>
+</html>
