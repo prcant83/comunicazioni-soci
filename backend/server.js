@@ -37,16 +37,14 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on('data', (data) => {
-      results.push(data);
-    })
+    .on('data', (data) => results.push(data))
     .on('end', () => {
       const stmt = db.prepare("INSERT INTO soci (nome, cognome, telefono, email, rubrica) VALUES (?, ?, ?, ?, ?)");
       results.forEach((r) => {
         stmt.run(r.nome, r.cognome, r.telefono, r.email, rubrica);
       });
       stmt.finalize();
-      fs.unlinkSync(req.file.path); // cancella il CSV dopo l’import
+      fs.unlinkSync(req.file.path);
       res.send('✅ Contatti importati con successo.');
     });
 });
@@ -63,7 +61,7 @@ app.post('/send-email', async (req, res) => {
   }
 });
 
-// API: elenco rubriche
+// Rubriche
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
@@ -72,7 +70,6 @@ app.get('/rubriche', (req, res) => {
   });
 });
 
-// API: contatti di una rubrica
 app.get('/rubrica/:nome', (req, res) => {
   const rubrica = req.params.nome;
   db.all("SELECT * FROM soci WHERE rubrica = ?", [rubrica], (err, rows) => {
@@ -81,7 +78,7 @@ app.get('/rubrica/:nome', (req, res) => {
   });
 });
 
-// Avvio server
+// Avvia server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
