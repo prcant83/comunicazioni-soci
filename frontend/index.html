@@ -1,23 +1,21 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Dashboard Comunicazioni Soci</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comunicazioni Soci</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <h1>📨 Dashboard Comunicazioni Soci</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" name="csv" accept=".csv">
-        <button type="submit">📥 Carica CSV</button>
-    </form>
-
-    <form id="emailForm">
-        <input type="text" name="subject" placeholder="Oggetto email">
-        <textarea name="html" placeholder="Contenuto MJML..."></textarea>
-        <button type="submit">📧 Invia Email</button>
-    </form>
-
-    <script src="script.js"></script>
+  <div class="container">
+    <h1>Comunicazioni Soci</h1>
+    <div class="button-grid">
+      <a href="sms.html" class="btn">📱 SMS</a>
+      <a href="whatsapp.html" class="btn">💬 WhatsApp</a>
+      <a href="email.html" class="btn">📧 Email</a>
+      <a href="rubrica.html" class="btn">📂 Rubrica</a>
+    </div>
+  </div>
+  <script src="scripts/main.js"></script>
 </body>
 </html>
