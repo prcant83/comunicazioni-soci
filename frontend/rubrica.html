@@ -1,83 +1,149 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gestione Rubriche</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <title>Rubrica Soci</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { text-align: center; }
+    .rubrica-lista { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+    .rubrica-item { padding: 10px 15px; background-color: #f0f0f0; border-radius: 5px; cursor: pointer; }
+    .rubrica-item:hover { background-color: #e0e0e0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f9f9f9; }
+    .azioni button { margin-right: 5px; }
+    .form-container { margin-top: 20px; }
+    .form-container input { margin-right: 10px; }
+  </style>
 </head>
 <body>
-  <main class="container">
-    <h1 class="title">📁 Gestione Rubriche</h1>
 
-    <section class="form-section">
-      <h2>📤 Importa Contatti da CSV</h2>
-      <form id="uploadForm" enctype="multipart/form-data">
-        <label for="rubrica">Nome Rubrica:</label>
-        <input type="text" name="rubrica" id="rubrica" required />
+  <h1>Rubrica Soci</h1>
 
-        <label for="file">File CSV:</label>
-        <input type="file" name="file" id="file" accept=".csv" required />
+  <div class="rubrica-lista" id="rubricaLista">
+    <!-- Elenco delle rubriche verrà popolato qui -->
+  </div>
 
-        <button type="submit">📥 Carica CSV</button>
+  <div id="contattiSezione" style="display:none;">
+    <h2>Contatti della Rubrica: <span id="nomeRubrica"></span></h2>
+    <table id="tabellaContatti">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Telefono</th>
+          <th>Email</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Contatti verranno popolati qui -->
+      </tbody>
+    </table>
+
+    <div class="form-container">
+      <h3>Aggiungi / Modifica Contatto</h3>
+      <form id="formContatto">
+        <input type="hidden" id="contattoId">
+        <input type="text" id="nome" placeholder="Nome completo" required>
+        <input type="tel" id="telefono" placeholder="Telefono (+39...)" pattern="\\+39\\d{9,10}" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <button type="submit">Salva</button>
+        <button type="button" onclick="resetForm()">Annulla</button>
       </form>
-    </section>
-
-    <section class="list-section">
-      <h2>📚 Elenco Rubriche</h2>
-      <ul id="elencoRubriche" class="rubrica-list"></ul>
-    </section>
-
-    <div id="esito" class="result"></div>
-  </main>
+    </div>
+  </div>
 
   <script>
-    async function caricaRubriche() {
-      const response = await fetch('/rubriche');
-      const rubriche = await response.json();
-      const lista = document.getElementById('elencoRubriche');
-      lista.innerHTML = '';
-      rubriche.forEach(r => {
-        const li = document.createElement('li');
-        li.innerHTML = `${r} <button onclick="eliminaRubrica('${r}')">🗑 Elimina</button>`;
-        lista.appendChild(li);
+    let rubricaCorrente = '';
+
+    // Carica l'elenco delle rubriche
+    fetch('/rubriche')
+      .then(response => response.json())
+      .then(data => {
+        const lista = document.getElementById('rubricaLista');
+        data.forEach(rubrica => {
+          const div = document.createElement('div');
+          div.className = 'rubrica-item';
+          div.textContent = rubrica;
+          div.onclick = () => caricaContatti(rubrica);
+          lista.appendChild(div);
+        });
       });
+
+    // Carica i contatti di una rubrica
+    function caricaContatti(rubrica) {
+      rubricaCorrente = rubrica;
+      document.getElementById('nomeRubrica').textContent = rubrica;
+      document.getElementById('contattiSezione').style.display = 'block';
+      fetch(`/rubriche/${encodeURIComponent(rubrica)}`)
+        .then(response => response.json())
+        .then(data => {
+          const tbody = document.getElementById('tabellaContatti').querySelector('tbody');
+          tbody.innerHTML = '';
+          data.forEach(contatto => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${contatto.nome}</td>
+              <td>${contatto.telefono}</td>
+              <td>${contatto.email}</td>
+              <td class="azioni">
+                <button onclick="modificaContatto(${contatto.id}, '${contatto.nome}', '${contatto.telefono}', '${contatto.email}')">Modifica</button>
+                <button onclick="eliminaContatto(${contatto.id})">Elimina</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
     }
 
-    async function eliminaRubrica(nome) {
-      const conferma = confirm(`Vuoi davvero eliminare la rubrica "${nome}"?`);
-      if (!conferma) return;
+    // Modifica un contatto
+    function modificaContatto(id, nome, telefono, email) {
+      document.getElementById('contattoId').value = id;
+      document.getElementById('nome').value = nome;
+      document.getElementById('telefono').value = telefono;
+      document.getElementById('email').value = email;
+    }
 
-      const res = await fetch(`/rubrica/${nome}`, { method: 'DELETE' });
-      const esito = document.getElementById('esito');
-      if (res.ok) {
-        esito.textContent = '✅ Rubrica eliminata.';
-        caricaRubriche();
-      } else {
-        const err = await res.text();
-        esito.textContent = `❌ Errore: ${err}`;
+    // Elimina un contatto
+    function eliminaContatto(id) {
+      if (confirm('Sei sicuro di voler eliminare questo contatto?')) {
+        fetch(`/rubriche/contatto/${id}`, { method: 'DELETE' })
+          .then(() => caricaContatti(rubricaCorrente));
       }
     }
 
-    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const res = await fetch('/upload', {
-        method: 'POST',
-        body: formData
-      });
+    // Gestione del form per aggiungere/modificare un contatto
+    document.getElementById('formContatto').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const id = document.getElementById('contattoId').value;
+      const nome = document.getElementById('nome').value.trim();
+      const telefono = document.getElementById('telefono').value.trim();
+      const email = document.getElementById('email').value.trim();
 
-      const esito = document.getElementById('esito');
-      if (res.ok) {
-        esito.textContent = '✅ Contatti importati correttamente.';
-        caricaRubriche();
-      } else {
-        const err = await res.text();
-        esito.textContent = `❌ Errore importazione: ${err}`;
+      // Validazione dei campi
+      const telefonoPattern = /^\+39\d{9,10}$/;
+      if (!telefonoPattern.test(telefono)) {
+        alert('Il numero di telefono deve iniziare con +39 seguito da 9 o 10 cifre.');
+        return;
       }
-    });
 
-    caricaRubriche();
-  </script>
-</body>
-</html>
+      const emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+      if (!emailPattern.test(email)) {
+        alert('Inserisci un indirizzo email valido.');
+        return;
+      }
+
+      const metodo = id ? 'PUT' : 'POST';
+      const url = id ? `/rubriche/contatto/${id}` : '/rubriche/contatto';
+      const contatto = { nome, telefono, email, rubrica: rubricaCorrente };
+
+      fetch(url, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contatto)
+      })
+      .then(() => {
+        reset
+::contentReference[oaicite:0]{index=0}
+ 
