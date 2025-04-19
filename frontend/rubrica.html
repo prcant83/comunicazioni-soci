@@ -2,82 +2,113 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gestione Rubriche</title>
   <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <main class="container">
-    <h1 class="title">📁 Gestione Rubriche</h1>
-
-    <section class="form-section">
-      <h2>📤 Importa Contatti da CSV</h2>
-      <form id="uploadForm" enctype="multipart/form-data">
-        <label for="rubrica">Nome Rubrica:</label>
-        <input type="text" name="rubrica" id="rubrica" required />
-
-        <label for="file">File CSV:</label>
-        <input type="file" name="file" id="file" accept=".csv" required />
-
-        <button type="submit">📥 Carica CSV</button>
-      </form>
-    </section>
-
-    <section class="list-section">
-      <h2>📚 Elenco Rubriche</h2>
-      <ul id="elencoRubriche" class="rubrica-list"></ul>
-    </section>
-
-    <div id="esito" class="result"></div>
-  </main>
-
   <script>
     async function caricaRubriche() {
-      const response = await fetch('/rubriche');
-      const rubriche = await response.json();
-      const lista = document.getElementById('elencoRubriche');
-      lista.innerHTML = '';
+      const res = await fetch('/rubriche');
+      const rubriche = await res.json();
+      const select = document.getElementById('rubrica');
+      select.innerHTML = '<option value="">-- Seleziona Rubrica --</option>';
       rubriche.forEach(r => {
-        const li = document.createElement('li');
-        li.innerHTML = `${r} <button onclick="eliminaRubrica('${r}')">🗑 Elimina</button>`;
-        lista.appendChild(li);
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        select.appendChild(opt);
       });
     }
 
-    async function eliminaRubrica(nome) {
-      const conferma = confirm(`Vuoi davvero eliminare la rubrica "${nome}"?`);
-      if (!conferma) return;
-
-      const res = await fetch(`/rubrica/${nome}`, { method: 'DELETE' });
-      const esito = document.getElementById('esito');
-      if (res.ok) {
-        esito.textContent = '✅ Rubrica eliminata.';
-        caricaRubriche();
-      } else {
-        const err = await res.text();
-        esito.textContent = `❌ Errore: ${err}`;
-      }
-    }
-
-    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    async function importaCSV(e) {
       e.preventDefault();
-      const formData = new FormData(e.target);
+      const file = document.getElementById('csvFile').files[0];
+      const rubrica = document.getElementById('rubrica').value || 'Generica';
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('rubrica', rubrica);
       const res = await fetch('/upload', {
         method: 'POST',
         body: formData
       });
+      const msg = await res.text();
+      document.getElementById('esito').textContent = msg;
+      caricaRubriche();
+    }
 
-      const esito = document.getElementById('esito');
-      if (res.ok) {
-        esito.textContent = '✅ Contatti importati correttamente.';
-        caricaRubriche();
-      } else {
-        const err = await res.text();
-        esito.textContent = `❌ Errore importazione: ${err}`;
-      }
-    });
+    async function eliminaRubrica() {
+      const rubrica = document.getElementById('rubrica').value;
+      if (!rubrica || !confirm(`Eliminare la rubrica "${rubrica}"?`)) return;
+      const res = await fetch(`/rubrica/${rubrica}`, { method: 'DELETE' });
+      const msg = await res.text();
+      document.getElementById('esito').textContent = msg;
+      caricaRubriche();
+      document.getElementById('contatti').innerHTML = '';
+    }
 
-    caricaRubriche();
+    async function caricaContatti() {
+      const rubrica = document.getElementById('rubrica').value;
+      const res = await fetch(`/rubrica/${rubrica}`);
+      const contatti = await res.json();
+      const div = document.getElementById('contatti');
+      div.innerHTML = '';
+      contatti.forEach(c => {
+        const riga = document.createElement('div');
+        riga.innerHTML = `
+          <b>${c.nome} ${c.cognome}</b> - ${c.telefono} - ${c.email} 
+          <button onclick="modifica(${c.id})">✏️</button>
+          <button onclick="eliminaContatto(${c.id})">🗑️</button>
+        `;
+        div.appendChild(riga);
+      });
+    }
+
+    async function eliminaContatto(id) {
+      if (!confirm('Eliminare questo contatto?')) return;
+      const res = await fetch(`/contatto/${id}`, { method: 'DELETE' });
+      const msg = await res.text();
+      document.getElementById('esito').textContent = msg;
+      caricaContatti();
+    }
+
+    async function modifica(id) {
+      const nome = prompt('Nome:');
+      const cognome = prompt('Cognome:');
+      const telefono = prompt('Telefono:');
+      const email = prompt('Email:');
+      if (!nome || !cognome || !telefono || !email) return alert('Tutti i campi sono obbligatori');
+      const res = await fetch(`/contatto/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, cognome, telefono, email })
+      });
+      const msg = await res.text();
+      document.getElementById('esito').textContent = msg;
+      caricaContatti();
+    }
+
+    window.onload = () => {
+      caricaRubriche();
+      document.getElementById('rubrica').addEventListener('change', caricaContatti);
+    };
   </script>
+</head>
+<body>
+  <div class="container">
+    <h1>📁 Gestione Rubriche</h1>
+    <form onsubmit="importaCSV(event)">
+      <label for="rubrica">Rubrica:</label>
+      <select id="rubrica"></select>
+
+      <label for="csvFile">File CSV:</label>
+      <input type="file" id="csvFile" name="file" accept=".csv" required>
+
+      <button type="submit">📥 Importa CSV</button>
+      <button type="button" onclick="eliminaRubrica()">🗑️ Elimina Rubrica</button>
+    </form>
+
+    <div id="contatti" class="contact-list"></div>
+    <p id="esito" class="status"></p>
+    <a href="index.html" class="back-link">← Torna alla Home</a>
+  </div>
 </body>
 </html>
