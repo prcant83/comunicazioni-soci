@@ -15,15 +15,14 @@
     .azioni button { margin-right: 5px; }
     .form-container { margin-top: 20px; }
     .form-container input { margin-right: 10px; }
+    .back-link { display: block; text-align: center; margin-top: 20px; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <h1>Rubrica Soci</h1>
 
-  <div class="rubrica-lista" id="rubricaLista">
-    <!-- Elenco delle rubriche verrà popolato qui -->
-  </div>
+  <div class="rubrica-lista" id="rubricaLista"></div>
 
   <div id="contattiSezione" style="display:none;">
     <h2>Contatti della Rubrica: <span id="nomeRubrica"></span></h2>
@@ -36,16 +35,14 @@
           <th>Azioni</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Contatti verranno popolati qui -->
-      </tbody>
+      <tbody></tbody>
     </table>
 
     <div class="form-container">
       <h3>Aggiungi / Modifica Contatto</h3>
       <form id="formContatto">
         <input type="hidden" id="contattoId">
-        <input type="text" id="nome" placeholder="Nome completo" required>
+        <input type="text" id="nome" placeholder="Nome completo o Azienda" required>
         <input type="tel" id="telefono" placeholder="Telefono (+39...)" pattern="\\+39\\d{9,10}" required>
         <input type="email" id="email" placeholder="Email" required>
         <button type="submit">Salva</button>
@@ -54,42 +51,57 @@
     </div>
   </div>
 
+  <a href="index.html" class="back-link">← Torna alla Home</a>
+
   <script>
     let rubricaCorrente = '';
 
-    // Carica l'elenco delle rubriche
-    fetch('/rubriche')
-      .then(response => response.json())
-      .then(data => {
-        const lista = document.getElementById('rubricaLista');
-        data.forEach(rubrica => {
-          const div = document.createElement('div');
-          div.className = 'rubrica-item';
-          div.textContent = rubrica;
-          div.onclick = () => caricaContatti(rubrica);
-          lista.appendChild(div);
-        });
-      });
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;',
+        "'": '&#39;', '"': '&quot;'
+      }[tag]));
+    }
 
-    // Carica i contatti di una rubrica
+    function resetForm() {
+      document.getElementById('formContatto').reset();
+      document.getElementById('contattoId').value = '';
+    }
+
+    function caricaRubriche() {
+      fetch('/rubriche')
+        .then(res => res.json())
+        .then(data => {
+          const lista = document.getElementById('rubricaLista');
+          lista.innerHTML = '';
+          data.forEach(rubrica => {
+            const div = document.createElement('div');
+            div.className = 'rubrica-item';
+            div.textContent = rubrica;
+            div.onclick = () => caricaContatti(rubrica);
+            lista.appendChild(div);
+          });
+        });
+    }
+
     function caricaContatti(rubrica) {
       rubricaCorrente = rubrica;
       document.getElementById('nomeRubrica').textContent = rubrica;
       document.getElementById('contattiSezione').style.display = 'block';
       fetch(`/rubriche/${encodeURIComponent(rubrica)}`)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-          const tbody = document.getElementById('tabellaContatti').querySelector('tbody');
+          const tbody = document.querySelector('#tabellaContatti tbody');
           tbody.innerHTML = '';
-          data.forEach(contatto => {
+          data.forEach(c => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td>${contatto.nome}</td>
-              <td>${contatto.telefono}</td>
-              <td>${contatto.email}</td>
+              <td>${escapeHTML(c.nome)}</td>
+              <td>${escapeHTML(c.telefono)}</td>
+              <td>${escapeHTML(c.email)}</td>
               <td class="azioni">
-                <button onclick="modificaContatto(${contatto.id}, '${contatto.nome}', '${contatto.telefono}', '${contatto.email}')">Modifica</button>
-                <button onclick="eliminaContatto(${contatto.id})">Elimina</button>
+                <button onclick="modificaContatto(${c.id}, '${escapeHTML(c.nome)}', '${escapeHTML(c.telefono)}', '${escapeHTML(c.email)}')">Modifica</button>
+                <button onclick="eliminaContatto(${c.id})">Elimina</button>
               </td>
             `;
             tbody.appendChild(tr);
@@ -97,7 +109,6 @@
         });
     }
 
-    // Modifica un contatto
     function modificaContatto(id, nome, telefono, email) {
       document.getElementById('contattoId').value = id;
       document.getElementById('nome').value = nome;
@@ -105,7 +116,6 @@
       document.getElementById('email').value = email;
     }
 
-    // Elimina un contatto
     function eliminaContatto(id) {
       if (confirm('Sei sicuro di voler eliminare questo contatto?')) {
         fetch(`/rubriche/contatto/${id}`, { method: 'DELETE' })
@@ -113,24 +123,28 @@
       }
     }
 
-    // Gestione del form per aggiungere/modificare un contatto
-    document.getElementById('formContatto').addEventListener('submit', function(event) {
+    document.getElementById('formContatto').addEventListener('submit', function (event) {
       event.preventDefault();
       const id = document.getElementById('contattoId').value;
       const nome = document.getElementById('nome').value.trim();
       const telefono = document.getElementById('telefono').value.trim();
       const email = document.getElementById('email').value.trim();
 
-      // Validazione dei campi
       const telefonoPattern = /^\+39\d{9,10}$/;
-      if (!telefonoPattern.test(telefono)) {
-        alert('Il numero di telefono deve iniziare con +39 seguito da 9 o 10 cifre.');
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!nome || nome.length < 2) {
+        alert('Inserisci un nome valido (almeno 2 caratteri).');
         return;
       }
 
-      const emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+      if (!telefonoPattern.test(telefono)) {
+        alert('Numero di telefono non valido. Deve iniziare con +39 e avere 9-10 cifre.');
+        return;
+      }
+
       if (!emailPattern.test(email)) {
-        alert('Inserisci un indirizzo email valido.');
+        alert('Email non valida.');
         return;
       }
 
@@ -144,6 +158,12 @@
         body: JSON.stringify(contatto)
       })
       .then(() => {
-        reset
-::contentReference[oaicite:0]{index=0}
- 
+        resetForm();
+        caricaContatti(rubricaCorrente);
+      });
+    });
+
+    window.onload = caricaRubriche;
+  </script>
+</body>
+</html>
