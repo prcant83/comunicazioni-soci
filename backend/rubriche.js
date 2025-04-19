@@ -1,4 +1,3 @@
-// backend/rubriche.js
 const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
@@ -40,32 +39,40 @@ router.delete('/contatto/:id', (req, res) => {
   });
 });
 
-// ✅ Modifica contatto singolo
-router.put('/contatto/:id', express.json(), (req, res) => {
-  const id = req.params.id;
-  const { nome, telefono, email } = req.body;
-  db.run(
-    "UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, telefono, email, id],
-    function(err) {
-      if (err) return res.status(500).send('Errore aggiornamento');
-      res.send(`Contatto con ID ${id} aggiornato.`);
-    }
-  );
-});
-
 // ✅ Aggiungi nuovo contatto
 router.post('/contatto', express.json(), (req, res) => {
   const { nome, telefono, email, rubrica } = req.body;
-  if (!nome || !telefono || !email || !rubrica) {
-    return res.status(400).send("Tutti i campi sono obbligatori");
-  }
+  if (!nome || !telefono || !email || !rubrica) return res.status(400).send('Tutti i campi sono obbligatori');
+
+  if (!/^\+39\d{9,10}$/.test(telefono)) return res.status(400).send('Formato telefono non valido');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).send('Email non valida');
+
   db.run(
     "INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
     [nome, telefono, email, rubrica],
     function(err) {
       if (err) return res.status(500).send('Errore inserimento contatto');
-      res.send(`Contatto aggiunto alla rubrica ${rubrica}.`);
+      res.send(`Contatto "${nome}" aggiunto alla rubrica "${rubrica}".`);
+    }
+  );
+});
+
+// ✅ Modifica contatto esistente
+router.put('/contatto/:id', express.json(), (req, res) => {
+  const id = req.params.id;
+  const { nome, telefono, email } = req.body;
+
+  if (!nome || !telefono || !email) return res.status(400).send('Tutti i campi sono obbligatori');
+
+  if (!/^\+39\d{9,10}$/.test(telefono)) return res.status(400).send('Formato telefono non valido');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).send('Email non valida');
+
+  db.run(
+    "UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, telefono, email, id],
+    function(err) {
+      if (err) return res.status(500).send('Errore aggiornamento contatto');
+      res.send(`Contatto ID ${id} aggiornato.`);
     }
   );
 });
