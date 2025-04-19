@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Log Invii</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { text-align: center; }
+    select, button { margin: 10px 5px; padding: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .back-link { display: block; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>📋 Log Comunicazioni</h1>
+
+  <label for="tipo">Filtra per tipo:</label>
+  <select id="tipo" onchange="caricaLog()">
+    <option value="">Tutti</option>
+    <option value="email">Email</option>
+    <option value="whatsapp">WhatsApp</option>
+    <option value="sms">SMS</option>
+  </select>
+  <button onclick="window.print()">🖨 Stampa</button>
+
+  <table>
+    <thead>
+      <tr><th>Data</th><th>Tipo</th><th>Destinatario</th><th>Messaggio</th></tr>
+    </thead>
+    <tbody id="logBody"></tbody>
+  </table>
+
+  <a href="index.html" class="back-link">← Torna alla Home</a>
+
+  <script>
+    function caricaLog() {
+      const tipo = document.getElementById('tipo').value;
+      fetch(`/log${tipo ? '?tipo=' + tipo : ''}`)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById('logBody');
+          tbody.innerHTML = '';
+          data.forEach(log => {
+            const row = `<tr>
+              <td>${log.data}</td>
+              <td>${log.tipo}</td>
+              <td>${log.destinatario}</td>
+              <td>${log.messaggio}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+          });
+        });
+    }
+
+    window.onload = caricaLog;
+  </script>
+</body>
+</html>
