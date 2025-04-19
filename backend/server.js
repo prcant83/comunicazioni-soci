@@ -15,13 +15,10 @@ const PORT = 3000;
 // Avvia WhatsApp
 startWhatsApp();
 
-// DB SQLite
+// Connessione Database SQLite
 const db = new sqlite3.Database('./database/soci.sqlite', (err) => {
-  if (err) {
-    console.error('❌ Errore connessione DB:', err.message);
-  } else {
-    console.log('✅ Database SQLite collegato.');
-  }
+  if (err) console.error('❌ Errore connessione DB:', err.message);
+  else console.log('✅ Database SQLite collegato.');
 });
 
 // Middleware
@@ -37,16 +34,14 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on('data', (data) => {
-      results.push(data);
-    })
+    .on('data', (data) => results.push(data))
     .on('end', () => {
-      const stmt = db.prepare("INSERT INTO soci (nome, cognome, telefono, email, rubrica) VALUES (?, ?, ?, ?, ?)");
+      const stmt = db.prepare("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)");
       results.forEach((r) => {
-        stmt.run(r.nome, r.cognome, r.telefono, r.email, rubrica);
+        stmt.run(r.nome, r.telefono, r.email, rubrica);
       });
       stmt.finalize();
-      fs.unlinkSync(req.file.path); // cancella il CSV dopo l’import
+      fs.unlinkSync(req.file.path);
       res.send('✅ Contatti importati con successo.');
     });
 });
@@ -81,22 +76,19 @@ app.post('/send-email', async (req, res) => {
       console.error('❌ Errore invio email:', err);
       res.status(500).send('Errore invio email');
     }
-  } else {
-    res.status(400).send('❌ Nessun destinatario specificato');
-  }
+  } else res.status(400).send('❌ Nessun destinatario specificato');
 });
 
 // API: elenco rubriche
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
-    const rubriche = rows.map(r => r.rubrica);
-    res.json(rubriche);
+    res.json(rows.map(r => r.rubrica));
   });
 });
 
 // API: contatti di una rubrica
-app.get('/rubrica/:nome', (req, res) => {
+app.get('/rubriche/:nome', (req, res) => {
   const rubrica = req.params.nome;
   db.all("SELECT * FROM soci WHERE rubrica = ?", [rubrica], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
@@ -105,35 +97,43 @@ app.get('/rubrica/:nome', (req, res) => {
 });
 
 // Elimina rubrica
-app.delete('/rubrica/:nome', (req, res) => {
+app.delete('/rubriche/:nome', (req, res) => {
   const rubrica = req.params.nome;
-  db.run("DELETE FROM soci WHERE rubrica = ?", [rubrica], function (err) {
+  db.run("DELETE FROM soci WHERE rubrica = ?", [rubrica], (err) => {
     if (err) return res.status(500).send('Errore eliminazione rubrica');
-    res.send(`✅ Rubrica "${rubrica}" eliminata con successo.`);
+    res.send(`✅ Rubrica "${rubrica}" eliminata.`);
   });
 });
 
 // Elimina singolo contatto
-app.delete('/contatto/:id', (req, res) => {
+app.delete('/rubriche/contatto/:id', (req, res) => {
   const id = req.params.id;
-  db.run("DELETE FROM soci WHERE id = ?", [id], function (err) {
+  db.run("DELETE FROM soci WHERE id = ?", [id], (err) => {
     if (err) return res.status(500).send('Errore eliminazione contatto');
-    res.send('✅ Contatto eliminato con successo.');
+    res.send('✅ Contatto eliminato.');
   });
 });
 
+// Aggiungi nuovo contatto
+app.post('/rubriche/contatto', (req, res) => {
+  const { nome, telefono, email, rubrica } = req.body;
+  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
+    [nome, telefono, email, rubrica], (err) => {
+      if (err) return res.status(500).send('Errore inserimento contatto');
+      res.send('✅ Contatto aggiunto.');
+    });
+});
+
 // Modifica singolo contatto
-app.put('/contatto/:id', (req, res) => {
+app.put('/rubriche/contatto/:id', (req, res) => {
   const id = req.params.id;
-  const { nome, cognome, telefono, email } = req.body;
-  db.run("UPDATE soci SET nome = ?, cognome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, cognome, telefono, email, id], function (err) {
+  const { nome, telefono, email } = req.body;
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, telefono, email, id], (err) => {
       if (err) return res.status(500).send('Errore modifica contatto');
-      res.send('✅ Contatto aggiornato con successo.');
+      res.send('✅ Contatto aggiornato.');
     });
 });
 
 // Avvio server
-app.listen(PORT, () => {
-  console.log(`✅ Server avviato su http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server avviato su http://localhost:${PORT}`));
