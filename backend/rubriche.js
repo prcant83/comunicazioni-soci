@@ -43,13 +43,29 @@ router.delete('/contatto/:id', (req, res) => {
 // ✅ Modifica contatto singolo
 router.put('/contatto/:id', express.json(), (req, res) => {
   const id = req.params.id;
-  const { nome, cognome, telefono, email } = req.body;
+  const { nome, telefono, email } = req.body;
   db.run(
-    "UPDATE soci SET nome = ?, cognome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, cognome, telefono, email, id],
+    "UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, telefono, email, id],
     function(err) {
       if (err) return res.status(500).send('Errore aggiornamento');
       res.send(`Contatto con ID ${id} aggiornato.`);
+    }
+  );
+});
+
+// ✅ Aggiungi nuovo contatto
+router.post('/contatto', express.json(), (req, res) => {
+  const { nome, telefono, email, rubrica } = req.body;
+  if (!nome || !telefono || !email || !rubrica) {
+    return res.status(400).send("Tutti i campi sono obbligatori");
+  }
+  db.run(
+    "INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
+    [nome, telefono, email, rubrica],
+    function(err) {
+      if (err) return res.status(500).send('Errore inserimento contatto');
+      res.send(`Contatto aggiunto alla rubrica ${rubrica}.`);
     }
   );
 });
