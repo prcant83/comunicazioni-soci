@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Rubrica Soci</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
@@ -15,33 +15,27 @@
     .azioni button { margin-right: 5px; }
     .form-container { margin-top: 20px; }
     .form-container input { margin-right: 10px; }
-    .import-container { text-align: center; margin-bottom: 30px; }
-    .delete-rubrica-btn { color: red; margin-left: 15px; cursor: pointer; }
-    .delete-rubrica-btn:hover { text-decoration: underline; }
+    .delete-btn { color: red; cursor: pointer; margin-left: 15px; }
   </style>
 </head>
 <body>
 
   <h1>Rubrica Soci</h1>
 
-  <div class="import-container">
-    <form id="formImport" enctype="multipart/form-data">
-      <input type="text" name="rubrica" placeholder="Nome Rubrica" required>
-      <input type="file" name="file" accept=".csv" required>
-      <button type="submit">📥 Importa CSV</button>
-    </form>
-  </div>
+  <!-- Importazione CSV -->
+  <form id="importForm" enctype="multipart/form-data">
+    <input type="text" name="rubrica" placeholder="Nome Rubrica" required>
+    <input type="file" name="file" accept=".csv" required>
+    <button type="submit">📥 Importa CSV</button>
+  </form>
+  <p id="importStatus"></p>
 
-  <div class="rubrica-lista" id="rubricaLista">
-    <!-- Elenco delle rubriche -->
-  </div>
+  <div class="rubrica-lista" id="rubricaLista"></div>
 
   <div id="contattiSezione" style="display:none;">
-    <h2>
-      Contatti della Rubrica: <span id="nomeRubrica"></span>
-      <span class="delete-rubrica-btn" onclick="eliminaRubrica()">🗑️ Elimina Rubrica</span>
+    <h2>Contatti della Rubrica: <span id="nomeRubrica"></span>
+      <span class="delete-btn" onclick="eliminaRubricaCorrente()">🗑 Elimina Rubrica</span>
     </h2>
-
     <table id="tabellaContatti">
       <thead>
         <tr>
@@ -51,9 +45,7 @@
           <th>Azioni</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Contatti -->
-      </tbody>
+      <tbody></tbody>
     </table>
 
     <div class="form-container">
@@ -61,7 +53,7 @@
       <form id="formContatto">
         <input type="hidden" id="contattoId">
         <input type="text" id="nome" placeholder="Nome completo" required>
-        <input type="tel" id="telefono" placeholder="Telefono (+39...)" pattern="\\+39\\d{9,10}" required>
+        <input type="tel" id="telefono" placeholder="Telefono (+39...)" pattern="\+39\d{9,10}" required>
         <input type="email" id="email" placeholder="Email" required>
         <button type="submit">Salva</button>
         <button type="button" onclick="resetForm()">Annulla</button>
@@ -69,14 +61,11 @@
     </div>
   </div>
 
-  <p style="text-align:center; margin-top: 40px;">
-    <a href="index.html">← Torna alla Home</a>
-  </p>
+  <p><a href="index.html">← Torna alla Home</a></p>
 
   <script>
     let rubricaCorrente = '';
 
-    // Carica le rubriche
     function caricaRubriche() {
       fetch('/rubriche')
         .then(res => res.json())
@@ -93,7 +82,6 @@
         });
     }
 
-    // Carica i contatti della rubrica
     function caricaContatti(rubrica) {
       rubricaCorrente = rubrica;
       document.getElementById('nomeRubrica').textContent = rubrica;
@@ -103,53 +91,21 @@
         .then(data => {
           const tbody = document.querySelector('#tabellaContatti tbody');
           tbody.innerHTML = '';
-          data.forEach(c => {
+          data.forEach(contatto => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td>${c.nome}</td>
-              <td>${c.telefono}</td>
-              <td>${c.email}</td>
+              <td>${contatto.nome}</td>
+              <td>${contatto.telefono}</td>
+              <td>${contatto.email}</td>
               <td class="azioni">
-                <button onclick="modificaContatto(${c.id}, '${c.nome}', '${c.telefono}', '${c.email}')">Modifica</button>
-                <button onclick="eliminaContatto(${c.id})">Elimina</button>
+                <button onclick="modificaContatto(${contatto.id}, '${contatto.nome}', '${contatto.telefono}', '${contatto.email}')">Modifica</button>
+                <button onclick="eliminaContatto(${contatto.id})">Elimina</button>
               </td>
             `;
             tbody.appendChild(tr);
           });
         });
     }
-
-    // Aggiungi/Modifica contatto
-    document.getElementById('formContatto').addEventListener('submit', e => {
-      e.preventDefault();
-      const id = document.getElementById('contattoId').value;
-      const nome = document.getElementById('nome').value.trim();
-      const telefono = document.getElementById('telefono').value.trim();
-      const email = document.getElementById('email').value.trim();
-
-      // Validazione
-      if (!/^\+39\d{9,10}$/.test(telefono)) {
-        alert('Numero non valido. Deve iniziare con +39 e avere 9-10 cifre.');
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        alert('Email non valida.');
-        return;
-      }
-
-      const metodo = id ? 'PUT' : 'POST';
-      const url = id ? `/rubriche/contatto/${id}` : '/rubriche/contatto';
-      const contatto = { nome, telefono, email, rubrica: rubricaCorrente };
-
-      fetch(url, {
-        method: metodo,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contatto)
-      }).then(() => {
-        caricaContatti(rubricaCorrente);
-        resetForm();
-      });
-    });
 
     function modificaContatto(id, nome, telefono, email) {
       document.getElementById('contattoId').value = id;
@@ -159,19 +115,9 @@
     }
 
     function eliminaContatto(id) {
-      if (confirm('Eliminare il contatto?')) {
+      if (confirm('Eliminare questo contatto?')) {
         fetch(`/rubriche/contatto/${id}`, { method: 'DELETE' })
           .then(() => caricaContatti(rubricaCorrente));
-      }
-    }
-
-    function eliminaRubrica() {
-      if (confirm(`Eliminare tutta la rubrica "${rubricaCorrente}"?`)) {
-        fetch(`/rubriche/${encodeURIComponent(rubricaCorrente)}`, { method: 'DELETE' })
-          .then(() => {
-            document.getElementById('contattiSezione').style.display = 'none';
-            caricaRubriche();
-          });
       }
     }
 
@@ -180,23 +126,51 @@
       document.getElementById('contattoId').value = '';
     }
 
-    // Importazione CSV
-    document.getElementById('formImport').addEventListener('submit', e => {
+    document.getElementById('formContatto').addEventListener('submit', function(e) {
       e.preventDefault();
-      const form = e.target;
-      const formData = new FormData(form);
+      const id = document.getElementById('contattoId').value;
+      const nome = document.getElementById('nome').value.trim();
+      const telefono = document.getElementById('telefono').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const metodo = id ? 'PUT' : 'POST';
+      const url = id ? `/rubriche/contatto/${id}` : '/rubriche/contatto';
+      const contatto = { nome, telefono, email, rubrica: rubricaCorrente };
 
+      fetch(url, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contatto)
+      }).then(() => {
+        resetForm();
+        caricaContatti(rubricaCorrente);
+      });
+    });
+
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
       fetch('/upload', {
         method: 'POST',
         body: formData
-      }).then(res => res.text())
-        .then(() => {
-          form.reset();
-          caricaRubriche();
-        });
+      })
+      .then(res => res.text())
+      .then(txt => {
+        document.getElementById('importStatus').textContent = txt;
+        caricaRubriche();
+      });
     });
 
-    caricaRubriche();
+    function eliminaRubricaCorrente() {
+      if (rubricaCorrente && confirm(`Eliminare la rubrica "${rubricaCorrente}"?`)) {
+        fetch(`/rubriche/${encodeURIComponent(rubricaCorrente)}`, { method: 'DELETE' })
+          .then(() => {
+            document.getElementById('contattiSezione').style.display = 'none';
+            caricaRubriche();
+          });
+      }
+    }
+
+    window.onload = caricaRubriche;
   </script>
 </body>
 </html>
