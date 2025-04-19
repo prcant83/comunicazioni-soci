@@ -37,31 +37,56 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on('data', (data) => results.push(data))
+    .on('data', (data) => {
+      results.push(data);
+    })
     .on('end', () => {
       const stmt = db.prepare("INSERT INTO soci (nome, cognome, telefono, email, rubrica) VALUES (?, ?, ?, ?, ?)");
       results.forEach((r) => {
         stmt.run(r.nome, r.cognome, r.telefono, r.email, rubrica);
       });
       stmt.finalize();
-      fs.unlinkSync(req.file.path);
+      fs.unlinkSync(req.file.path); // cancella il CSV dopo l’import
       res.send('✅ Contatti importati con successo.');
     });
 });
 
 // Invia Email
 app.post('/send-email', async (req, res) => {
-  const { to, subject, message } = req.body;
-  try {
-    await sendEmail(to, subject, message);
-    res.send('✅ Email inviata');
-  } catch (err) {
-    console.error('❌ Errore invio email:', err);
-    res.status(500).send('Errore invio email');
+  const { to, subject, message, rubrica } = req.body;
+
+  if (rubrica) {
+    db.all("SELECT email FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
+      if (err) return res.status(500).send('Errore DB');
+      if (rows.length === 0) return res.status(404).send('Rubrica vuota');
+
+      for (let i = 0; i < rows.length; i++) {
+        const email = rows[i].email;
+        try {
+          await sendEmail(email, subject, message);
+          console.log(`📧 Email inviata a ${email}`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        } catch (err) {
+          console.error(`❌ Errore invio email a ${email}:`, err);
+        }
+      }
+
+      res.send('✅ Email inviate a tutti i contatti della rubrica');
+    });
+  } else if (to) {
+    try {
+      await sendEmail(to, subject, message);
+      res.send('✅ Email inviata');
+    } catch (err) {
+      console.error('❌ Errore invio email:', err);
+      res.status(500).send('Errore invio email');
+    }
+  } else {
+    res.status(400).send('❌ Nessun destinatario specificato');
   }
 });
 
-// Rubriche
+// API: elenco rubriche
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
@@ -70,6 +95,7 @@ app.get('/rubriche', (req, res) => {
   });
 });
 
+// API: contatti di una rubrica
 app.get('/rubrica/:nome', (req, res) => {
   const rubrica = req.params.nome;
   db.all("SELECT * FROM soci WHERE rubrica = ?", [rubrica], (err, rows) => {
@@ -78,7 +104,36 @@ app.get('/rubrica/:nome', (req, res) => {
   });
 });
 
-// Avvia server
+// Elimina rubrica
+app.delete('/rubrica/:nome', (req, res) => {
+  const rubrica = req.params.nome;
+  db.run("DELETE FROM soci WHERE rubrica = ?", [rubrica], function (err) {
+    if (err) return res.status(500).send('Errore eliminazione rubrica');
+    res.send(`✅ Rubrica "${rubrica}" eliminata con successo.`);
+  });
+});
+
+// Elimina singolo contatto
+app.delete('/contatto/:id', (req, res) => {
+  const id = req.params.id;
+  db.run("DELETE FROM soci WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).send('Errore eliminazione contatto');
+    res.send('✅ Contatto eliminato con successo.');
+  });
+});
+
+// Modifica singolo contatto
+app.put('/contatto/:id', (req, res) => {
+  const id = req.params.id;
+  const { nome, cognome, telefono, email } = req.body;
+  db.run("UPDATE soci SET nome = ?, cognome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, cognome, telefono, email, id], function (err) {
+      if (err) return res.status(500).send('Errore modifica contatto');
+      res.send('✅ Contatto aggiornato con successo.');
+    });
+});
+
+// Avvio server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
