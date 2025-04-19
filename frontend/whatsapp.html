@@ -11,12 +11,12 @@
     <h1>📱 Invia Messaggio WhatsApp</h1>
     <form id="whatsappForm">
       <label for="rubrica">Rubrica:</label>
-      <select id="rubrica" name="rubrica">
+      <select id="rubrica" name="rubrica" required>
         <option value="">-- Seleziona Rubrica --</option>
       </select>
 
       <label for="messaggio">Messaggio:</label>
-      <textarea id="messaggio" name="messaggio" rows="4" placeholder="Scrivi qui il messaggio..."></textarea>
+      <textarea id="messaggio" name="messaggio" rows="4" placeholder="Scrivi qui il messaggio..." required></textarea>
 
       <button type="submit">📤 Invia WhatsApp</button>
     </form>
@@ -25,34 +25,51 @@
   </div>
 
   <script>
-    async function caricaRubriche() {
-      const res = await fetch('/rubriche');
-      const data = await res.json();
-      const select = document.getElementById('rubrica');
-      data.forEach(nome => {
-        const opzione = document.createElement('option');
-        opzione.value = nome;
-        opzione.textContent = nome;
-        select.appendChild(opzione);
+    // Carica rubriche
+    fetch('/rubriche')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('rubrica');
+        data.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r;
+          opt.textContent = r;
+          select.appendChild(opt);
+        });
+      })
+      .catch(err => {
+        console.error('❌ Errore caricamento rubriche:', err);
+        document.getElementById('risultato').textContent = '❌ Errore nel caricamento delle rubriche';
       });
-    }
 
+    // Invio form
     document.getElementById('whatsappForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const rubrica = document.getElementById('rubrica').value;
-      const messaggio = document.getElementById('messaggio').value;
 
-      const res = await fetch('/send-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rubrica, messaggio })
-      });
+      const rubrica = document.getElementById('rubrica').value.trim();
+      const messaggio = document.getElementById('messaggio').value.trim();
 
-      const testo = await res.text();
-      document.getElementById('risultato').textContent = testo;
+      if (!rubrica || !messaggio) {
+        document.getElementById('risultato').textContent = '❌ Rubrica e messaggio sono obbligatori';
+        console.warn('⚠️ Form non valido:', { rubrica, messaggio });
+        return;
+      }
+
+      try {
+        const res = await fetch('/send-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rubrica, messaggio })
+        });
+
+        const text = await res.text();
+        document.getElementById('risultato').textContent = res.ok ? `✅ ${text}` : `❌ Errore: ${text}`;
+        console.log('📤 Risposta invio:', text);
+      } catch (err) {
+        console.error('❌ Errore durante l’invio:', err);
+        document.getElementById('risultato').textContent = '❌ Errore durante l’invio';
+      }
     });
-
-    caricaRubriche();
   </script>
 </body>
 </html>
