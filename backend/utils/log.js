@@ -1,28 +1,19 @@
+// utils/log.js
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('./database/soci.sqlite');
 
-// backend/logger.js
-const { createLogger, format, transports } = require('winston');
-const fs = require('fs');
-const path = require('path');
-
-// Assicurati che la directory dei log esista
-const logDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir);
+function salvaLogInvio(tipo, destinatario, messaggio, rubrica = '', allegato = '') {
+  const sql = `
+    INSERT INTO log_invio (data, tipo, destinatario, rubrica, messaggio, allegato)
+    VALUES (datetime('now', 'localtime'), ?, ?, ?, ?, ?)
+  `;
+  db.run(sql, [tipo, destinatario, rubrica, messaggio, allegato], function(err) {
+    if (err) {
+      console.error('❌ Errore salvataggio log:', err.message);
+    } else {
+      console.log(`📚 Log salvato: ${tipo} -> ${destinatario}`);
+    }
+  });
 }
 
-const logger = createLogger({
-  level: 'info',
-  format: format.combine(
-    format.timestamp(),
-    format.printf(({ timestamp, level, message }) => {
-      return `${timestamp} [${level.toUpperCase()}]: ${message}`;
-    })
-  ),
-  transports: [
-    new transports.File({ filename: path.join(logDir, 'error.log'), level: 'error' }),
-    new transports.File({ filename: path.join(logDir, 'combined.log') }),
-    new transports.Console()
-  ]
-});
-
-module.exports = logger;
+module.exports = { salvaLogInvio };
