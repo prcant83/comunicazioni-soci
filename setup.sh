@@ -7,13 +7,13 @@ if [ ! -d "comunicazioni-soci" ]; then
   git clone https://github.com/prcant83/comunicazioni-soci.git
 fi
 
-cd comunicazioni-soci || exit
+cd comunicazioni-soci
 
-# Aggiornamento pacchetti
+# Aggiorna pacchetti
 sudo apt update
 sudo apt upgrade -y
 
-# Verifica installazione Node.js
+# Node.js
 if ! command -v node &> /dev/null; then
   echo "⚙️  Installazione Node.js..."
   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -22,13 +22,13 @@ else
   echo "✅ Node.js già installato"
 fi
 
-# Installazione pacchetti necessari
-sudo apt install -y sqlite3 libsqlite3-dev gammu gammu-smsd chromium
+# Altri pacchetti richiesti
+sudo apt install -y sqlite3 gammu gammu-smsd chromium
 
-# Installazione dipendenze Node.js
+# Installa dipendenze Node.js
 npm install
 
-# Creazione file .env base
+# Crea file .env se assente
 if [ ! -f ".env" ]; then
 cat <<EOL > .env
 SMTP_HOST=pro.eu.turbo-smtp.com
@@ -38,25 +38,40 @@ SMTP_USER=utente@example.it
 SMTP_PASS=password
 FROM_EMAIL=noreply@orsognacantina.it
 EOL
-echo "🛠️  File .env creato (modificare con le proprie credenziali SMTP)"
+echo "🛠️  File .env creato (modifica le credenziali SMTP)"
 fi
 
-# Creazione cartella database se non esiste
+# Crea cartella DB
 mkdir -p database
 
-# Creazione database e tabelle
-echo "🗃️  Creazione database e tabelle..."
-
+# ⚙️ Aggiorna struttura tabella soci rimuovendo "cognome"
+echo "📐 Aggiorno struttura tabella soci..."
 sqlite3 ./database/soci.sqlite <<EOF
-CREATE TABLE IF NOT EXISTS soci (
+PRAGMA foreign_keys=off;
+
+-- Crea nuova tabella senza la colonna cognome
+CREATE TABLE IF NOT EXISTS soci_nuova (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nome TEXT,
-  cognome TEXT,
   telefono TEXT,
   email TEXT,
   rubrica TEXT
 );
 
+-- Copia dati esistenti
+INSERT INTO soci_nuova (id, nome, telefono, email, rubrica)
+SELECT id, nome, telefono, email, rubrica FROM soci;
+
+-- Sostituisci tabella vecchia
+DROP TABLE soci;
+ALTER TABLE soci_nuova RENAME TO soci;
+
+PRAGMA foreign_keys=on;
+EOF
+
+# 🗃️ Ricrea tabella log_invio (se non esiste)
+echo "📚 Creo tabella log_invio..."
+sqlite3 ./database/soci.sqlite <<EOF
 CREATE TABLE IF NOT EXISTS log_invio (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   data TEXT,
@@ -68,4 +83,4 @@ CREATE TABLE IF NOT EXISTS log_invio (
 );
 EOF
 
-echo "✅ Setup completato. Avvia l'app con: npm start"
+echo "✅ Setup completato! Avvia con: npm start"
