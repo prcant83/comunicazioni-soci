@@ -26,7 +26,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
 
-// Upload CSV
+// Upload CSV (senza cognome)
 const upload = multer({ dest: 'csv/' });
 app.post('/upload', upload.single('file'), (req, res) => {
   const results = [];
@@ -34,11 +34,19 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on('data', (data) => results.push(data))
+    .on('data', (data) => {
+      if (data.nome && data.telefono && data.email) {
+        results.push({
+          nome: data.nome.trim(),
+          telefono: data.telefono.trim(),
+          email: data.email.trim()
+        });
+      }
+    })
     .on('end', () => {
-      const stmt = db.prepare("INSERT INTO soci (nome, cognome, telefono, email, rubrica) VALUES (?, ?, ?, ?, ?)");
+      const stmt = db.prepare("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)");
       results.forEach((r) => {
-        stmt.run(r.nome, r.cognome, r.telefono, r.email, rubrica);
+        stmt.run(r.nome, r.telefono, r.email, rubrica);
       });
       stmt.finalize();
       fs.unlinkSync(req.file.path);
@@ -127,9 +135,9 @@ app.delete('/contatto/:id', (req, res) => {
 // Modifica contatto
 app.put('/contatto/:id', (req, res) => {
   const id = req.params.id;
-  const { nome, cognome, telefono, email } = req.body;
-  db.run("UPDATE soci SET nome = ?, cognome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, cognome, telefono, email, id], function (err) {
+  const { nome, telefono, email } = req.body;
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, telefono, email, id], function (err) {
       if (err) return res.status(500).send('Errore modifica contatto');
       res.send('✅ Contatto aggiornato con successo.');
     });
