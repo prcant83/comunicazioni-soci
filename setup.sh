@@ -34,9 +34,9 @@ cat <<EOL > .env
 SMTP_HOST=pro.eu.turbo-smtp.com
 SMTP_PORT=465
 SMTP_SECURE=true
-SMTP_USER=utente@example.it
-SMTP_PASS=password
-FROM_EMAIL=noreply@orsognacantina.it
+SMTP_USER=smtp@orsognacantina.it
+SMTP_PASS=173hfyejdhHRHDJE,11
+FROM_EMAIL=noreplay@orsognacantina.it
 EOL
 echo "🛠️  File .env creato (modifica le credenziali SMTP)"
 fi
