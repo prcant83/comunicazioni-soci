@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./database/soci.sqlite');
+const { salvaLogInvio } = require('./utils/log');
 
 // ✅ Elenco rubriche
 router.get('/', (req, res) => {
@@ -26,6 +27,7 @@ router.delete('/:nome', (req, res) => {
   const rubrica = req.params.nome;
   db.run("DELETE FROM soci WHERE rubrica = ?", [rubrica], function(err) {
     if (err) return res.status(500).send('Errore eliminazione');
+    salvaLogInvio('rubrica-eliminata', 'Tutti', `Rubrica "${rubrica}" eliminata`, rubrica);
     res.send(`Rubrica "${rubrica}" eliminata con successo.`);
   });
 });
@@ -33,9 +35,13 @@ router.delete('/:nome', (req, res) => {
 // ✅ Elimina contatto singolo
 router.delete('/contatto/:id', (req, res) => {
   const id = req.params.id;
-  db.run("DELETE FROM soci WHERE id = ?", [id], function(err) {
-    if (err) return res.status(500).send('Errore eliminazione contatto');
-    res.send(`Contatto con ID ${id} eliminato.`);
+  db.get("SELECT * FROM soci WHERE id = ?", [id], (err, contatto) => {
+    if (err || !contatto) return res.status(500).send('Errore recupero contatto');
+    db.run("DELETE FROM soci WHERE id = ?", [id], function(err) {
+      if (err) return res.status(500).send('Errore eliminazione contatto');
+      salvaLogInvio('contatto-eliminato', contatto.email, `Contatto eliminato`, contatto.rubrica);
+      res.send(`Contatto con ID ${id} eliminato.`);
+    });
   });
 });
 
@@ -52,6 +58,7 @@ router.post('/contatto', express.json(), (req, res) => {
     [nome, telefono, email, rubrica],
     function(err) {
       if (err) return res.status(500).send('Errore inserimento contatto');
+      salvaLogInvio('contatto-aggiunto', email, `Contatto: ${nome}`, rubrica);
       res.send(`Contatto "${nome}" aggiunto alla rubrica "${rubrica}".`);
     }
   );
@@ -72,6 +79,7 @@ router.put('/contatto/:id', express.json(), (req, res) => {
     [nome, telefono, email, id],
     function(err) {
       if (err) return res.status(500).send('Errore aggiornamento contatto');
+      salvaLogInvio('contatto-modificato', email, `Modificato: ${nome}`, null);
       res.send(`Contatto ID ${id} aggiornato.`);
     }
   );
