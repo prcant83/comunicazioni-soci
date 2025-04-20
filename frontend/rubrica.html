@@ -52,7 +52,7 @@
       <h3>Aggiungi / Modifica Contatto</h3>
       <form id="formContatto">
         <input type="hidden" id="contattoId">
-        <input type="text" id="nome" placeholder="Nome completo" required>
+        <input type="text" id="nome" placeholder="Nome completo o azienda" required>
         <input type="tel" id="telefono" placeholder="Telefono (+39...)" pattern="\+39\d{9,10}" required>
         <input type="email" id="email" placeholder="Email" required>
         <button type="submit">Salva</button>
@@ -98,7 +98,7 @@
               <td>${contatto.telefono}</td>
               <td>${contatto.email}</td>
               <td class="azioni">
-                <button onclick="modificaContatto(${contatto.id}, '${contatto.nome}', '${contatto.telefono}', '${contatto.email}')">Modifica</button>
+                <button onclick="modificaContatto(${contatto.id}, \`${contatto.nome}\`, '${contatto.telefono}', '${contatto.email}')">Modifica</button>
                 <button onclick="eliminaContatto(${contatto.id})">Elimina</button>
               </td>
             `;
