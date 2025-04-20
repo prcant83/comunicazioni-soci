@@ -12,10 +12,10 @@ require('dotenv').config();
 const app = express();
 const PORT = 3000;
 
-// Avvia sessione WhatsApp
+// Avvia WhatsApp
 startWhatsApp();
 
-// DB
+// Connessione DB
 const db = new sqlite3.Database('./database/soci.sqlite', (err) => {
   if (err) console.error('❌ Errore connessione DB:', err.message);
   else console.log('✅ Database SQLite collegato.');
@@ -46,44 +46,49 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// Invia Email
+// Invia Email (singola o a rubrica)
 app.post('/send-email', async (req, res) => {
   const { to, subject, message, rubrica, allegato } = req.body;
 
-  if (rubrica) {
+  if (rubrica && !to) {
     db.all("SELECT email FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
       if (err) return res.status(500).send('Errore DB');
-      if (rows.length === 0) return res.status(404).send('Rubrica vuota');
+      if (!rows || rows.length === 0) return res.status(404).send('Rubrica vuota');
 
-      for (let i = 0; i < rows.length; i++) {
-        const email = rows[i].email;
+      for (const row of rows) {
+        const destinatario = row.email?.trim();
+        if (!destinatario) continue;
+
         try {
-          await sendEmail(email, subject, message, allegato);
-          salvaLogInvio('email', email, message, rubrica, allegato || null);
-          console.log(`📧 Email inviata a ${email}`);
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await sendEmail(destinatario, subject, message, allegato);
+          salvaLogInvio('email', destinatario, message, rubrica, allegato || null);
+          console.log(`📧 Email inviata a ${destinatario}`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
         } catch (err) {
-          console.error(`❌ Errore invio email a ${email}:`, err);
+          console.error(`❌ Errore invio email a ${destinatario}:`, err.message || err);
         }
       }
 
       res.send('✅ Email inviate a tutti i contatti della rubrica');
     });
-  } else if (to) {
+  } else if (to && !rubrica) {
+    const destinatario = to.trim();
+    if (!destinatario) return res.status(400).send('Indirizzo email non valido');
+
     try {
-      await sendEmail(to, subject, message, allegato);
-      salvaLogInvio('email', to, message, null, allegato || null);
+      await sendEmail(destinatario, subject, message, allegato);
+      salvaLogInvio('email', destinatario, message, null, allegato || null);
       res.send('✅ Email inviata');
     } catch (err) {
-      console.error('❌ Errore invio email:', err);
-      res.status(500).send('Errore invio email');
+      console.error('❌ Errore invio email singola:', err.message || err);
+      res.status(500).send('Errore invio email singola');
     }
   } else {
-    res.status(400).send('❌ Nessun destinatario specificato');
+    res.status(400).send('❌ Devi specificare una rubrica o un destinatario singolo');
   }
 });
 
-// API rubriche
+// API: elenco rubriche
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
@@ -92,7 +97,7 @@ app.get('/rubriche', (req, res) => {
   });
 });
 
-// Contatti rubrica
+// API: contatti di una rubrica
 app.get('/rubrica/:nome', (req, res) => {
   const rubrica = req.params.nome;
   db.all("SELECT * FROM soci WHERE rubrica = ?", [rubrica], (err, rows) => {
@@ -110,7 +115,7 @@ app.delete('/rubrica/:nome', (req, res) => {
   });
 });
 
-// Elimina contatto
+// Elimina singolo contatto
 app.delete('/contatto/:id', (req, res) => {
   const id = req.params.id;
   db.run("DELETE FROM soci WHERE id = ?", [id], function (err) {
@@ -130,7 +135,7 @@ app.put('/contatto/:id', (req, res) => {
     });
 });
 
-// API log invii
+// API: log invii
 app.get('/api/log', (req, res) => {
   db.all("SELECT * FROM log_invio ORDER BY id DESC", [], (err, rows) => {
     if (err) return res.status(500).send('Errore recupero log');
@@ -138,6 +143,7 @@ app.get('/api/log', (req, res) => {
   });
 });
 
+// Avvio server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
