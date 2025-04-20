@@ -7,7 +7,7 @@ if [ ! -d "comunicazioni-soci" ]; then
   git clone https://github.com/prcant83/comunicazioni-soci.git
 fi
 
-cd comunicazioni-soci
+cd comunicazioni-soci || exit
 
 # Aggiornamento pacchetti
 sudo apt update
@@ -22,8 +22,8 @@ else
   echo "✅ Node.js già installato"
 fi
 
-# Altri pacchetti necessari
-sudo apt install -y sqlite3 gammu gammu-smsd chromium
+# Installazione pacchetti necessari
+sudo apt install -y sqlite3 libsqlite3-dev gammu gammu-smsd chromium
 
 # Installazione dipendenze Node.js
 npm install
@@ -41,8 +41,12 @@ EOL
 echo "🛠️  File .env creato (modificare con le proprie credenziali SMTP)"
 fi
 
-# Creazione database e tabella soci
+# Creazione cartella database se non esiste
 mkdir -p database
+
+# Creazione database e tabelle
+echo "🗃️  Creazione database e tabelle..."
+
 sqlite3 ./database/soci.sqlite <<EOF
 CREATE TABLE IF NOT EXISTS soci (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,11 +56,7 @@ CREATE TABLE IF NOT EXISTS soci (
   email TEXT,
   rubrica TEXT
 );
-EOF
-echo "🗃️  Creo database e tabella soci..."
 
-# Creazione tabella log_invio per log degli invii
-sqlite3 ./database/soci.sqlite <<EOF
 CREATE TABLE IF NOT EXISTS log_invio (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   data TEXT,
@@ -67,6 +67,5 @@ CREATE TABLE IF NOT EXISTS log_invio (
   allegato TEXT
 );
 EOF
-echo "✅ Tabella log_invio creata (se non esiste)"
 
 echo "✅ Setup completato. Avvia l'app con: npm start"
