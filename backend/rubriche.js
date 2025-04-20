@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('./database/soci.sqlite');
-const { salvaLogInvio } = require('./utils/log');
 
 // ✅ Elenco rubriche
 router.get('/', (req, res) => {
@@ -25,9 +24,8 @@ router.get('/:nome', (req, res) => {
 // ✅ Elimina rubrica
 router.delete('/:nome', (req, res) => {
   const rubrica = req.params.nome;
-  db.run("DELETE FROM soci WHERE rubrica = ?", [rubrica], function(err) {
+  db.run("DELETE FROM soci WHERE rubrica = ?", [rubrica], function (err) {
     if (err) return res.status(500).send('Errore eliminazione');
-    salvaLogInvio('rubrica-eliminata', 'Tutti', `Rubrica "${rubrica}" eliminata`, rubrica);
     res.send(`Rubrica "${rubrica}" eliminata con successo.`);
   });
 });
@@ -35,30 +33,33 @@ router.delete('/:nome', (req, res) => {
 // ✅ Elimina contatto singolo
 router.delete('/contatto/:id', (req, res) => {
   const id = req.params.id;
-  db.get("SELECT * FROM soci WHERE id = ?", [id], (err, contatto) => {
-    if (err || !contatto) return res.status(500).send('Errore recupero contatto');
-    db.run("DELETE FROM soci WHERE id = ?", [id], function(err) {
-      if (err) return res.status(500).send('Errore eliminazione contatto');
-      salvaLogInvio('contatto-eliminato', contatto.email, `Contatto eliminato`, contatto.rubrica);
-      res.send(`Contatto con ID ${id} eliminato.`);
-    });
+  db.run("DELETE FROM soci WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).send('Errore eliminazione contatto');
+    res.send(`Contatto con ID ${id} eliminato.`);
   });
 });
 
 // ✅ Aggiungi nuovo contatto
 router.post('/contatto', express.json(), (req, res) => {
   const { nome, telefono, email, rubrica } = req.body;
-  if (!nome || !telefono || !email || !rubrica) return res.status(400).send('Tutti i campi sono obbligatori');
 
-  if (!/^\+39\d{9,10}$/.test(telefono)) return res.status(400).send('Formato telefono non valido');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).send('Email non valida');
+  if (!nome || !telefono || !email || !rubrica) {
+    return res.status(400).send('Tutti i campi sono obbligatori');
+  }
+
+  if (!/^\+39\d{9,10}$/.test(telefono)) {
+    return res.status(400).send('Formato telefono non valido');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).send('Email non valida');
+  }
 
   db.run(
     "INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
-    [nome, telefono, email, rubrica],
-    function(err) {
+    [nome.trim(), telefono.trim(), email.trim(), rubrica.trim()],
+    function (err) {
       if (err) return res.status(500).send('Errore inserimento contatto');
-      salvaLogInvio('contatto-aggiunto', email, `Contatto: ${nome}`, rubrica);
       res.send(`Contatto "${nome}" aggiunto alla rubrica "${rubrica}".`);
     }
   );
@@ -69,17 +70,23 @@ router.put('/contatto/:id', express.json(), (req, res) => {
   const id = req.params.id;
   const { nome, telefono, email } = req.body;
 
-  if (!nome || !telefono || !email) return res.status(400).send('Tutti i campi sono obbligatori');
+  if (!nome || !telefono || !email) {
+    return res.status(400).send('Tutti i campi sono obbligatori');
+  }
 
-  if (!/^\+39\d{9,10}$/.test(telefono)) return res.status(400).send('Formato telefono non valido');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).send('Email non valida');
+  if (!/^\+39\d{9,10}$/.test(telefono)) {
+    return res.status(400).send('Formato telefono non valido');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).send('Email non valida');
+  }
 
   db.run(
     "UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, telefono, email, id],
-    function(err) {
+    [nome.trim(), telefono.trim(), email.trim(), id],
+    function (err) {
       if (err) return res.status(500).send('Errore aggiornamento contatto');
-      salvaLogInvio('contatto-modificato', email, `Modificato: ${nome}`, null);
       res.send(`Contatto ID ${id} aggiornato.`);
     }
   );
