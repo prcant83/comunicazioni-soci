@@ -2,7 +2,7 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-async function sendEmail(to, subject, html) {
+async function sendEmail(to, subject, message, allegato = null) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT),
@@ -13,14 +13,25 @@ async function sendEmail(to, subject, html) {
     }
   });
 
-  const info = await transporter.sendMail({
+  const mailOptions = {
     from: `"PRcant.NET" <${process.env.SMTP_USER}>`,
     to,
     subject,
-    html
-  });
+    html: message
+  };
 
-  console.log("📧 Email inviata:", info.messageId);
+  // Aggiunge l’allegato solo se presente
+  if (allegato) {
+    mailOptions.attachments = [
+      {
+        filename: allegato.split('/').pop(),
+        path: allegato
+      }
+    ];
+  }
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log(`📧 Email inviata a ${to}: ${info.messageId}`);
 }
 
 module.exports = { sendEmail };
