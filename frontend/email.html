@@ -12,14 +12,14 @@
 
     <form id="emailForm" class="form-section">
       <label for="destinatario">Destinatario (email o rubrica):</label>
-      <select id="destinatario" name="destinatario">
-        <option value="">-- Seleziona rubrica --</option>
+      <select id="destinatario" name="destinatario" required>
+        <option value="">-- Seleziona rubrica o email singola --</option>
         <option value="__singola__">📩 Email singola</option>
       </select>
 
       <div id="emailSingola" style="display:none;">
         <label for="email">Email destinatario:</label>
-        <input type="email" id="email" name="email" />
+        <input type="email" id="email" name="email" placeholder="esempio@email.it"/>
       </div>
 
       <label for="oggetto">Oggetto:</label>
@@ -31,7 +31,7 @@
       <button type="submit">📤 Invia Email</button>
     </form>
 
-    <div id="esito" class="result"></div>
+    <div id="esito" class="result" style="margin-top: 15px; text-align: center;"></div>
   </main>
 
   <script>
@@ -60,19 +60,29 @@
       e.preventDefault();
       const form = e.target;
       const rubrica = form.destinatario.value;
-      const to = rubrica === '__singola__' ? form.email.value : rubrica;
       const subject = form.oggetto.value;
       const message = form.messaggio.value;
+      const payload = { subject, message };
+
+      if (rubrica === '__singola__') {
+        const to = form.email.value.trim();
+        if (!to) return alert("Inserisci un indirizzo email valido.");
+        payload.to = to;
+      } else {
+        payload.rubrica = rubrica;
+      }
 
       const res = await fetch('/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, subject, message })
+        body: JSON.stringify(payload)
       });
 
       const esito = document.getElementById('esito');
       if (res.ok) {
-        esito.textContent = '✅ Email inviata con successo';
+        esito.textContent = '✅ Email inviata con successo!';
+        form.reset();
+        document.getElementById('emailSingola').style.display = 'none';
       } else {
         const err = await res.text();
         esito.textContent = `❌ Errore: ${err}`;
