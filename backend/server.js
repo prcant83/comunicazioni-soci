@@ -45,7 +45,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
     })
     .on('end', () => {
       const stmt = db.prepare("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)");
-      results.forEach((r) => {
+      results.forEach(r => {
         stmt.run(r.nome, r.telefono, r.email, rubrica);
       });
       stmt.finalize();
@@ -54,96 +54,94 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// Invia Email (singola o a rubrica)
+// Invia Email
 app.post('/send-email', async (req, res) => {
   const { to, subject, message, rubrica, allegato } = req.body;
 
   if (rubrica && !to) {
     db.all("SELECT email FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
       if (err) return res.status(500).send('Errore DB');
-      if (!rows || rows.length === 0) return res.status(404).send('Rubrica vuota');
-
+      if (!rows.length) return res.status(404).send('Rubrica vuota');
+      
       for (const row of rows) {
-        const destinatario = row.email?.trim();
-        if (!destinatario) continue;
-
         try {
-          await sendEmail(destinatario, subject, message, allegato);
-          salvaLogInvio('email', destinatario, message, rubrica, allegato || null);
-          console.log(`📧 Email inviata a ${destinatario}`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await sendEmail(row.email, subject, message, allegato);
+          salvaLogInvio('email', row.email, message, rubrica, allegato || '');
         } catch (err) {
-          console.error(`❌ Errore invio email a ${destinatario}:`, err.message || err);
+          console.error(`❌ Errore invio email a ${row.email}:`, err.message);
+          salvaLogInvio('email', row.email, `ERRORE: ${err.message}`, rubrica);
         }
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       res.send('✅ Email inviate a tutti i contatti della rubrica');
     });
-  } else if (to && !rubrica) {
-    const destinatario = to.trim();
-    if (!destinatario) return res.status(400).send('Indirizzo email non valido');
-
+  } else if (to) {
     try {
-      await sendEmail(destinatario, subject, message, allegato);
-      salvaLogInvio('email', destinatario, message, null, allegato || null);
+      await sendEmail(to, subject, message, allegato);
+      salvaLogInvio('email', to, message, null, allegato || '');
       res.send('✅ Email inviata');
     } catch (err) {
-      console.error('❌ Errore invio email singola:', err.message || err);
-      res.status(500).send('Errore invio email singola');
+      console.error(`❌ Errore invio email:`, err.message);
+      salvaLogInvio('email', to, `ERRORE: ${err.message}`, null);
+      res.status(500).send('Errore invio email');
     }
   } else {
-    res.status(400).send('❌ Devi specificare una rubrica o un destinatario singolo');
+    res.status(400).send('❌ Nessun destinatario specificato');
   }
 });
 
-// API: elenco rubriche
+// Rubriche
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
-    const rubriche = rows.map(r => r.rubrica);
-    res.json(rubriche);
+    res.json(rows.map(r => r.rubrica));
   });
 });
 
-// API: contatti di una rubrica
-app.get('/rubrica/:nome', (req, res) => {
-  const rubrica = req.params.nome;
-  db.all("SELECT * FROM soci WHERE rubrica = ?", [rubrica], (err, rows) => {
+app.get('/rubriche/:nome', (req, res) => {
+  db.all("SELECT * FROM soci WHERE rubrica = ?", [req.params.nome], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
     res.json(rows);
   });
 });
 
-// Elimina rubrica
-app.delete('/rubrica/:nome', (req, res) => {
-  const rubrica = req.params.nome;
-  db.run("DELETE FROM soci WHERE rubrica = ?", [rubrica], function (err) {
+app.delete('/rubriche/:nome', (req, res) => {
+  db.run("DELETE FROM soci WHERE rubrica = ?", [req.params.nome], function (err) {
     if (err) return res.status(500).send('Errore eliminazione rubrica');
-    res.send(`✅ Rubrica "${rubrica}" eliminata con successo.`);
+    res.send(`✅ Rubrica "${req.params.nome}" eliminata`);
   });
 });
 
-// Elimina singolo contatto
-app.delete('/contatto/:id', (req, res) => {
-  const id = req.params.id;
-  db.run("DELETE FROM soci WHERE id = ?", [id], function (err) {
+// Contatti
+app.delete('/rubriche/contatto/:id', (req, res) => {
+  db.run("DELETE FROM soci WHERE id = ?", [req.params.id], function (err) {
     if (err) return res.status(500).send('Errore eliminazione contatto');
-    res.send('✅ Contatto eliminato con successo.');
+    res.send('✅ Contatto eliminato');
   });
 });
 
-// Modifica contatto
-app.put('/contatto/:id', (req, res) => {
-  const id = req.params.id;
-  const { nome, telefono, email } = req.body;
-  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, telefono, email, id], function (err) {
-      if (err) return res.status(500).send('Errore modifica contatto');
-      res.send('✅ Contatto aggiornato con successo.');
+app.post('/rubriche/contatto', (req, res) => {
+  const { nome, telefono, email, rubrica } = req.body;
+  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
+    [nome, telefono, email, rubrica],
+    function (err) {
+      if (err) return res.status(500).send('Errore inserimento');
+      res.send(`Contatto ${nome} aggiunto`);
     });
 });
 
-// API: log invii
+app.put('/rubriche/contatto/:id', (req, res) => {
+  const { nome, telefono, email } = req.body;
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, telefono, email, req.params.id],
+    function (err) {
+      if (err) return res.status(500).send('Errore aggiornamento');
+      res.send('Contatto aggiornato');
+    });
+});
+
+// Log
 app.get('/api/log', (req, res) => {
   db.all("SELECT * FROM log_invio ORDER BY id DESC", [], (err, rows) => {
     if (err) return res.status(500).send('Errore recupero log');
@@ -151,7 +149,6 @@ app.get('/api/log', (req, res) => {
   });
 });
 
-// Avvio server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
