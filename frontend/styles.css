@@ -1,18 +1,33 @@
 body {
   font-family: Arial, sans-serif;
-  margin: 0; padding: 0;
+  margin: 0;
+  padding: 0;
   background: #f5f5f5;
+  color: #333;
 }
+
 .container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 50px 20px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
   text-align: center;
-  padding: 50px;
 }
+
+h1 {
+  color: #25D366;
+  margin-bottom: 30px;
+}
+
 .button-grid {
   display: flex;
   justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
 }
+
 .btn {
   display: inline-block;
   padding: 20px;
@@ -21,7 +36,74 @@ body {
   text-decoration: none;
   font-size: 18px;
   border-radius: 10px;
+  transition: background-color 0.3s;
 }
 .btn:hover {
   background-color: #0056b3;
+}
+
+/* Pulsanti WhatsApp */
+button {
+  background-color: #25D366;
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+button:hover {
+  background-color: #1ebe5d;
+}
+
+/* Input e textarea */
+input[type="text"],
+input[type="email"],
+select,
+textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+/* Progress Bar */
+.progress-bar {
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 15px;
+  display: none;
+}
+.progress-bar-inner {
+  height: 20px;
+  background-color: #25D366;
+  width: 0%;
+  color: white;
+  text-align: center;
+  line-height: 20px;
+  transition: width 0.3s;
+}
+
+/* Link Torna alla Home */
+.back-link {
+  display: inline-block;
+  margin-top: 20px;
+  color: #555;
+  text-decoration: none;
+}
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* Esito finale */
+.status {
+  font-weight: bold;
+  margin-top: 20px;
 }
