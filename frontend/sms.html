@@ -1,55 +1,139 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invio SMS</title>
-  <link rel="stylesheet" href="../assets/styles/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invia SMS</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .progress-bar {
+      width: 100%;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .progress-bar-inner {
+      height: 20px;
+      background-color: #4caf50;
+      width: 0%;
+      color: white;
+      text-align: center;
+      line-height: 20px;
+      transition: width 0.3s;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Invio SMS</h1>
-    <form id="smsForm">
-      <label for="rubrica">Rubrica:</label>
-      <select id="rubrica" name="rubrica"></select>
+  <main class="container">
+    <h1 class="title">📱 Invia SMS</h1>
+
+    <form id="smsForm" class="form-section" enctype="multipart/form-data">
+      <label for="destinatario">Destinatario (rubrica o numero singolo):</label>
+      <select id="destinatario" name="destinatario" required>
+        <option value="">-- Seleziona rubrica o numero singolo --</option>
+        <option value="__singola__">📩 SMS singolo</option>
+      </select>
+
+      <div id="smsSingolo" style="display:none;">
+        <label for="numero">Numero destinatario:</label>
+        <input type="text" id="numero" name="numero" placeholder="Es. +391234567890"/>
+      </div>
 
       <label for="messaggio">Messaggio:</label>
-      <textarea id="messaggio" name="messaggio" rows="5" required></textarea>
+      <textarea id="messaggio" name="messaggio" rows="6" required></textarea>
 
-      <button type="submit">Invia SMS</button>
+      <button type="submit">📤 Invia SMS</button>
     </form>
-    <div id="risultato"></div>
-  </div>
+
+    <div class="progress-bar" id="progressContainer">
+      <div class="progress-bar-inner" id="progressBar">0%</div>
+    </div>
+
+    <div id="esito" class="result" style="margin-top: 15px; text-align: center;"></div>
+  </main>
 
   <script>
-    // Carica le rubriche disponibili
-    fetch('/rubriche')
-      .then(res => res.json())
-      .then(data => {
-        const select = document.getElementById('rubrica');
-        data.forEach(nome => {
-          const option = document.createElement('option');
-          option.value = nome;
-          option.textContent = nome;
-          select.appendChild(option);
-        });
+    async function caricaRubriche() {
+      const response = await fetch('/rubriche');
+      const rubriche = await response.json();
+      const select = document.getElementById('destinatario');
+      rubriche.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.rubrica;
+        opt.textContent = `📂 Rubrica: ${r.rubrica}`;
+        select.appendChild(opt);
       });
+    }
 
-    // Gestione invio SMS
+    document.getElementById('destinatario').addEventListener('change', (e) => {
+      const smsSingolo = document.getElementById('smsSingolo');
+      if (e.target.value === '__singola__') {
+        smsSingolo.style.display = 'block';
+      } else {
+        smsSingolo.style.display = 'none';
+      }
+    });
+
     document.getElementById('smsForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const rubrica = document.getElementById('rubrica').value;
-      const messaggio = document.getElementById('messaggio').value;
+      const form = e.target;
+      const formData = new FormData(form);
 
-      const res = await fetch('/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rubrica, messaggio })
-      });
+      const progressBar = document.getElementById('progressBar');
+      const progressContainer = document.getElementById('progressContainer');
+      const esito = document.getElementById('esito');
+      esito.textContent = '';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+      progressContainer.style.display = 'block';
+      form.querySelector('button').disabled = true;
 
-      const txt = await res.text();
-      document.getElementById('risultato').textContent = txt;
+      if (form.destinatario.value === '__singola__') {
+        const numero = form.numero.value.trim();
+        if (!numero) return alert("Inserisci un numero valido.");
+        formData.append('to', numero);
+      } else {
+        formData.append('rubrica', form.destinatario.value);
+      }
+
+      formData.append('messaggio', form.messaggio.value);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/send-sms', true);
+
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          progressBar.style.width = percent + '%';
+          progressBar.textContent = percent + '%';
+        }
+      };
+
+      xhr.onload = function () {
+        form.querySelector('button').disabled = false;
+        progressBar.style.width = '100%';
+        progressBar.textContent = '100%';
+        if (xhr.status === 200) {
+          esito.textContent = '✅ SMS inviato con successo!';
+          form.reset();
+          document.getElementById('smsSingolo').style.display = 'none';
+        } else {
+          esito.textContent = `❌ Errore: ${xhr.responseText}`;
+        }
+      };
+
+      xhr.onerror = function () {
+        form.querySelector('button').disabled = false;
+        esito.textContent = '❌ Errore di rete.';
+      };
+
+      xhr.send(formData);
     });
+
+    caricaRubriche();
   </script>
 </body>
 </html>
