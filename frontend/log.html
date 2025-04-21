@@ -65,6 +65,12 @@
       text-decoration: none;
       color: #007BFF;
     }
+
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        font-size: 13px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -93,10 +99,13 @@
     <tbody id="logTableBody"></tbody>
   </table>
 
+  <p id="noLogsMessage" style="text-align:center; display:none; margin-top:10px;">🕵️‍♂️ Nessun log trovato.</p>
+
   <a href="index.html" class="back-link">← Torna alla Home</a>
 
   <script>
     function escapeHTML(str) {
+      if (!str) return '';
       return str.replace(/[&<>'"]/g, function (char) {
         const escapeChars = {
           '&': '&amp;',
@@ -109,13 +118,20 @@
       });
     }
 
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
     function caricaLog(tipo = '') {
       const url = tipo ? `/api/log?tipo=${tipo}` : '/api/log';
       fetch(url)
         .then(res => res.json())
         .then(data => {
           const tbody = document.getElementById('logTableBody');
-          tbody.innerHTML = ''; // reset
+          const noLogsMessage = document.getElementById('noLogsMessage');
+          tbody.innerHTML = '';
+          noLogsMessage.style.display = data.length === 0 ? 'block' : 'none';
 
           data.forEach(log => {
             const tr = document.createElement('tr');
@@ -123,7 +139,7 @@
             let allegatoHTML = '';
             if (log.allegato) {
               const ext = log.allegato.split('.').pop().toLowerCase();
-              if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+              if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
                 allegatoHTML = `<a href="/${log.allegato}" target="_blank">
                                   <img src="/${log.allegato}" class="preview" alt="img">
                                 </a>`;
@@ -139,7 +155,7 @@
               <td>${escapeHTML(log.data)}</td>
               <td>${escapeHTML(log.tipo)}</td>
               <td>${escapeHTML(log.destinatario)}</td>
-              <td>${escapeHTML(log.rubrica || '')}</td>
+              <td>${escapeHTML(log.rubrica)}</td>
               <td>${escapeHTML(log.messaggio)}</td>
               <td>${allegatoHTML}</td>
             `;
@@ -148,12 +164,22 @@
         });
     }
 
+    // Cambio filtro
     document.getElementById('filtroTipo').addEventListener('change', function () {
       caricaLog(this.value);
+      const tipo = this.value;
+      const newUrl = tipo ? `?tipo=${tipo}` : window.location.pathname;
+      window.history.pushState({}, '', newUrl);
     });
 
-    // Caricamento iniziale
-    caricaLog();
+    // Caricamento iniziale con query string se presente
+    const tipoParam = getQueryParam('tipo');
+    if (tipoParam) {
+      document.getElementById('filtroTipo').value = tipoParam;
+      caricaLog(tipoParam);
+    } else {
+      caricaLog();
+    }
   </script>
 </body>
 </html>
