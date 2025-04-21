@@ -4,13 +4,43 @@
   <meta charset="UTF-8">
   <title>Log Invii</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
     h1 { text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #f9f9f9; }
-    a.back-link { display: block; margin-top: 20px; text-align: center; text-decoration: none; color: #007BFF; }
-    a.back-link:hover { text-decoration: underline; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: white;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    th {
+      background-color: #e9ecef;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    a.back-link {
+      display: block;
+      margin-top: 20px;
+      text-align: center;
+      text-decoration: none;
+      color: #007BFF;
+    }
+
+    a.back-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -35,20 +65,38 @@
   <a href="index.html" class="back-link">← Torna alla Home</a>
 
   <script>
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, function (char) {
+        const escapeChars = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        };
+        return escapeChars[char];
+      });
+    }
+
     fetch('/api/log')
       .then(res => res.json())
       .then(data => {
         const tbody = document.getElementById('logTableBody');
         data.forEach(log => {
           const tr = document.createElement('tr');
+
+          const allegatoHTML = log.allegato
+            ? `<a href="/${escapeHTML(log.allegato)}" target="_blank">📎 Apri</a>`
+            : '';
+
           tr.innerHTML = `
             <td>${log.id}</td>
-            <td>${log.data}</td>
-            <td>${log.tipo}</td>
-            <td>${log.destinatario}</td>
-            <td>${log.rubrica || ''}</td>
-            <td>${log.messaggio}</td>
-            <td>${log.allegato || ''}</td>
+            <td>${escapeHTML(log.data)}</td>
+            <td>${escapeHTML(log.tipo)}</td>
+            <td>${escapeHTML(log.destinatario)}</td>
+            <td>${escapeHTML(log.rubrica || '')}</td>
+            <td>${escapeHTML(log.messaggio)}</td>
+            <td>${allegatoHTML}</td>
           `;
           tbody.appendChild(tr);
         });
