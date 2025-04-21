@@ -221,4 +221,14 @@ app.post('/send-sms', async (req, res) => {
 
     for (const row of rows) {
       await invia(row.telefono);
-      await new Promise(resolve => setTimeout(resolve, 
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
+    res.send('✅ Messaggi SMS inviati con successo');
+  });
+});
+
+// ▶️ Avvio server
+app.listen(PORT, () => {
+  console.log(`✅ Server avviato su http://localhost:${PORT}`);
+});
