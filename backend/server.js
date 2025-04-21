@@ -6,6 +6,7 @@ const sqlite3 = require('sqlite3').verbose();
 const csv = require('csv-parser');
 const { sendEmail } = require('./email');
 const { startWhatsApp } = require('./whatsapp');
+const { sendSMS } = require('./sms'); // Importa la funzione sendSMS per SMS
 const { salvaLogInvio } = require('./utils/log');
 require('dotenv').config();
 
@@ -93,7 +94,6 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
     res.status(400).send('❌ Nessun destinatario specificato');
   }
 });
-
 
 // 📚 Rubriche
 app.get('/rubriche', (req, res) => {
@@ -199,7 +199,26 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   });
 });
 
-// ▶️ Avvio server
-app.listen(PORT, () => {
-  console.log(`✅ Server avviato su http://localhost:${PORT}`);
-});
+// 📱 Invia SMS
+app.post('/send-sms', async (req, res) => {
+  const { rubrica, messaggio } = req.body;
+
+  const invia = async (numero) => {
+    try {
+      await sendSMS(numero, messaggio);
+      salvaLogInvio('sms', numero, messaggio, rubrica || null, '');
+    } catch (err) {
+      console.error(`❌ Errore invio SMS a ${numero}:`, err.message);
+      salvaLogInvio('sms', numero, `ERRORE: ${err.message}`, rubrica || null);
+    }
+  };
+
+  if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
+
+  db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
+    if (err) return res.status(500).send('Errore DB');
+    if (!rows.length) return res.status(404).send('Rubrica vuota');
+
+    for (const row of rows) {
+      await invia(row.telefono);
+      await new Promise(resolve => setTimeout(resolve, 
