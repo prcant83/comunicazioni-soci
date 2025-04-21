@@ -58,26 +58,25 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// 📧 Invia Email (con allegato salvato correttamente)
+// 📧 Invia Email
 app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const { to, subject, message, rubrica } = req.body;
-
-  let percorsoAllegato = '';
-  let percorsoReale = null;
+  let percorsoAllegatoSalvato = '';
+  let originalName = req.file ? req.file.originalname : null;
+  let finalPath = null;
 
   if (req.file) {
-    const estensione = path.extname(req.file.originalname);
-    const nomeFinale = `allegato_${Date.now()}${estensione}`;
-    const destinazione = path.join(__dirname, '../allegati/email', nomeFinale);
-    fs.renameSync(req.file.path, destinazione);
-    percorsoAllegato = `allegati/email/${nomeFinale}`;
-    percorsoReale = destinazione;
+    const estensione = path.extname(originalName);
+    const nomeUnico = `allegato_${Date.now()}${estensione}`;
+    finalPath = path.join(__dirname, '../allegati/email', nomeUnico);
+    fs.renameSync(req.file.path, finalPath);
+    percorsoAllegatoSalvato = `allegati/email/${nomeUnico}`;
   }
 
   const invia = async (dest) => {
     try {
-      await sendEmail(dest, subject, message, percorsoReale, req.file?.originalname);
-      salvaLogInvio('email', dest, message, rubrica || null, percorsoAllegato || '');
+      await sendEmail(dest, subject, message, finalPath, originalName);
+      salvaLogInvio('email', dest, message, rubrica || null, percorsoAllegatoSalvato || '');
     } catch (err) {
       console.error(`❌ Errore invio email a ${dest}:`, err.message);
       salvaLogInvio('email', dest, `ERRORE: ${err.message}`, rubrica || null);
@@ -154,7 +153,7 @@ app.put('/rubriche/contatto/:id', (req, res) => {
     });
 });
 
-// 📜 Log con filtro tipo
+// 📜 Log con filtro tipo (email, whatsapp, sms)
 app.get('/api/log', (req, res) => {
   const tipo = req.query.tipo;
   const sql = tipo
