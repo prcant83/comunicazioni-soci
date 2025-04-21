@@ -25,8 +25,8 @@ const db = new sqlite3.Database('./database/soci.sqlite', (err) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
-app.use('/allegati/email', express.static(path.join(__dirname, 'allegati/email')));
-app.use('/allegati/whatsapp', express.static(path.join(__dirname, 'allegati/whatsapp')));
+app.use('/allegati/email', express.static(path.join(__dirname, '../allegati/email')));
+app.use('/allegati/whatsapp', express.static(path.join(__dirname, '../allegati/whatsapp')));
 
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
