@@ -25,8 +25,9 @@ const db = new sqlite3.Database('./database/soci.sqlite', (err) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
+app.use('/allegati/email', express.static(path.join(__dirname, 'allegati/email')));
 
-// Multer configurazione upload
+// Multer configurazione
 const upload = multer({ dest: 'tmp/' });
 
 // CSV Import
@@ -56,15 +57,23 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// Invia Email (con allegato opzionale)
+// Invia Email (con allegato)
 app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const { to, subject, message, rubrica } = req.body;
-  const fileTempPath = req.file ? req.file.path : null;
+  let percorsoAllegato = '';
+
+  if (req.file) {
+    const estensione = path.extname(req.file.originalname);
+    const nomeUnico = `allegato_${Date.now()}${estensione}`;
+    const destinazione = path.join(__dirname, 'allegati/email', nomeUnico);
+    fs.renameSync(req.file.path, destinazione);
+    percorsoAllegato = `allegati/email/${nomeUnico}`;
+  }
 
   const invia = async (dest) => {
     try {
-      await sendEmail(dest, subject, message, fileTempPath);
-      salvaLogInvio('email', dest, message, rubrica || null, fileTempPath || '');
+      await sendEmail(dest, subject, message, percorsoAllegato ? path.join(__dirname, percorsoAllegato) : null);
+      salvaLogInvio('email', dest, message, rubrica || null, percorsoAllegato || '');
     } catch (err) {
       console.error(`❌ Errore invio email a ${dest}:`, err.message);
       salvaLogInvio('email', dest, `ERRORE: ${err.message}`, rubrica || null);
