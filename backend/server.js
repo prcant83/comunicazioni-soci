@@ -58,16 +58,26 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// 📧 Invia Email
+// 📧 Invia Email (con allegato salvato correttamente)
 app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const { to, subject, message, rubrica } = req.body;
-  const fileTempPath = req.file ? req.file.path : null;
-  const originalName = req.file ? req.file.originalname : null;
+
+  let percorsoAllegato = '';
+  let percorsoReale = null;
+
+  if (req.file) {
+    const estensione = path.extname(req.file.originalname);
+    const nomeFinale = `allegato_${Date.now()}${estensione}`;
+    const destinazione = path.join(__dirname, '../allegati/email', nomeFinale);
+    fs.renameSync(req.file.path, destinazione);
+    percorsoAllegato = `allegati/email/${nomeFinale}`;
+    percorsoReale = destinazione;
+  }
 
   const invia = async (dest) => {
     try {
-      await sendEmail(dest, subject, message, fileTempPath, originalName);
-      salvaLogInvio('email', dest, message, rubrica || null, req.file ? `allegati/email/allegato_${Date.now()}${path.extname(originalName)}` : '');
+      await sendEmail(dest, subject, message, percorsoReale, req.file?.originalname);
+      salvaLogInvio('email', dest, message, rubrica || null, percorsoAllegato || '');
     } catch (err) {
       console.error(`❌ Errore invio email a ${dest}:`, err.message);
       salvaLogInvio('email', dest, `ERRORE: ${err.message}`, rubrica || null);
@@ -144,7 +154,7 @@ app.put('/rubriche/contatto/:id', (req, res) => {
     });
 });
 
-// 📜 Log con filtro tipo (email, whatsapp, sms)
+// 📜 Log con filtro tipo
 app.get('/api/log', (req, res) => {
   const tipo = req.query.tipo;
   const sql = tipo
@@ -166,7 +176,7 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   if (req.file) {
     const estensione = path.extname(req.file.originalname);
     const nomeUnico = `wa_${Date.now()}${estensione}`;
-    const destinazione = path.join(__dirname, 'allegati/whatsapp', nomeUnico);
+    const destinazione = path.join(__dirname, '../allegati/whatsapp', nomeUnico);
     fs.renameSync(req.file.path, destinazione);
     percorsoAllegato = `allegati/whatsapp/${nomeUnico}`;
   }
@@ -175,7 +185,7 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
 
   const invia = async (numero) => {
     try {
-      await sendWhatsApp(numero, messaggio, percorsoAllegato ? path.join(__dirname, percorsoAllegato) : null);
+      await sendWhatsApp(numero, messaggio, percorsoAllegato ? path.join(__dirname, '../', percorsoAllegato) : null);
       salvaLogInvio('whatsapp', numero, messaggio, rubrica || null, percorsoAllegato || '');
     } catch (err) {
       console.error(`❌ Errore invio WhatsApp a ${numero}:`, err.message);
@@ -198,6 +208,7 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   });
 });
 
+// ▶️ Avvio server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
