@@ -15,7 +15,7 @@ const PORT = 3000;
 // Avvia WhatsApp
 startWhatsApp();
 
-// Connessione DB
+// DB
 const db = new sqlite3.Database('./database/soci.sqlite', (err) => {
   if (err) console.error('❌ Errore connessione DB:', err.message);
   else console.log('✅ Database SQLite collegato.');
@@ -26,8 +26,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
 
-// Upload CSV (senza cognome)
-const upload = multer({ dest: 'csv/' });
+// Multer configurazione upload
+const upload = multer({ dest: 'tmp/' });
+
+// CSV Import
 app.post('/upload', upload.single('file'), (req, res) => {
   const results = [];
   const rubrica = req.body.rubrica || 'Generica';
@@ -54,38 +56,36 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// Invia Email
-app.post('/send-email', async (req, res) => {
-  const { to, subject, message, rubrica, allegato } = req.body;
+// Invia Email (con allegato opzionale)
+app.post('/send-email', upload.single('allegato'), async (req, res) => {
+  const { to, subject, message, rubrica } = req.body;
+  const fileTempPath = req.file ? req.file.path : null;
+
+  const invia = async (dest) => {
+    try {
+      await sendEmail(dest, subject, message, fileTempPath);
+      salvaLogInvio('email', dest, message, rubrica || null, fileTempPath || '');
+    } catch (err) {
+      console.error(`❌ Errore invio email a ${dest}:`, err.message);
+      salvaLogInvio('email', dest, `ERRORE: ${err.message}`, rubrica || null);
+    }
+  };
 
   if (rubrica && !to) {
     db.all("SELECT email FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
       if (err) return res.status(500).send('Errore DB');
       if (!rows.length) return res.status(404).send('Rubrica vuota');
-      
+
       for (const row of rows) {
-        try {
-          await sendEmail(row.email, subject, message, allegato);
-          salvaLogInvio('email', row.email, message, rubrica, allegato || '');
-        } catch (err) {
-          console.error(`❌ Errore invio email a ${row.email}:`, err.message);
-          salvaLogInvio('email', row.email, `ERRORE: ${err.message}`, rubrica);
-        }
+        await invia(row.email);
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       res.send('✅ Email inviate a tutti i contatti della rubrica');
     });
   } else if (to) {
-    try {
-      await sendEmail(to, subject, message, allegato);
-      salvaLogInvio('email', to, message, null, allegato || '');
-      res.send('✅ Email inviata');
-    } catch (err) {
-      console.error(`❌ Errore invio email:`, err.message);
-      salvaLogInvio('email', to, `ERRORE: ${err.message}`, null);
-      res.status(500).send('Errore invio email');
-    }
+    await invia(to);
+    res.send('✅ Email inviata');
   } else {
     res.status(400).send('❌ Nessun destinatario specificato');
   }
@@ -149,6 +149,7 @@ app.get('/api/log', (req, res) => {
   });
 });
 
+// Avvio server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
