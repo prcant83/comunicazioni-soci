@@ -1,4 +1,3 @@
-// backend/email.js
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
@@ -30,27 +29,24 @@ async function sendEmail(to, subject, message, filePathTemp = null) {
     html: message
   };
 
-  // Se c'è un allegato, salvalo e includilo
-  if (filePathTemp) {
+  // Se c'è un allegato e il file esiste, spostalo e includilo
+  if (filePathTemp && fs.existsSync(filePathTemp)) {
     const nomeFile = path.basename(filePathTemp);
     const cartellaDestinazione = path.join(__dirname, '../allegati/email');
     const percorsoFinale = path.join(cartellaDestinazione, nomeFile);
 
-    // Crea la cartella se non esiste
     if (!fs.existsSync(cartellaDestinazione)) {
       fs.mkdirSync(cartellaDestinazione, { recursive: true });
     }
 
-    // Sposta il file temporaneo nella cartella finale
     fs.renameSync(filePathTemp, percorsoFinale);
 
-    // Aggiunge allegato alla mail
     mailOptions.attachments = [{
       filename: nomeFile,
       path: percorsoFinale
     }];
 
-    // Aggiunge percorso finale all'opzione per registrarlo nei log
+    // Facoltativo: utile per i log
     mailOptions._allegatoSalvato = percorsoFinale;
   }
 
