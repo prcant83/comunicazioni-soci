@@ -26,6 +26,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
 app.use('/allegati/email', express.static(path.join(__dirname, 'allegati/email')));
+app.use('/allegati/whatsapp', express.static(path.join(__dirname, 'allegati/whatsapp')));
 
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
@@ -142,9 +143,15 @@ app.put('/rubriche/contatto/:id', (req, res) => {
     });
 });
 
-// 📜 Log
+// 📜 Log con filtro tipo (email, whatsapp, sms)
 app.get('/api/log', (req, res) => {
-  db.all("SELECT * FROM log_invio ORDER BY id DESC", [], (err, rows) => {
+  const tipo = req.query.tipo; // esempio: ?tipo=email
+  const sql = tipo
+    ? "SELECT * FROM log_invio WHERE tipo = ? ORDER BY id DESC"
+    : "SELECT * FROM log_invio ORDER BY id DESC";
+  const params = tipo ? [tipo] : [];
+
+  db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).send('Errore recupero log');
     res.json(rows);
   });
