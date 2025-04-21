@@ -1,3 +1,4 @@
+// backend/email.js
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +10,7 @@ require('dotenv').config();
  * @param {string} subject - Oggetto
  * @param {string} message - Corpo HTML del messaggio
  * @param {string|null} filePathTemp - Percorso temporaneo dell’allegato (se presente)
- * @returns {Promise<void>}
+ * @returns {Promise<string|null>} - Percorso del file allegato salvato (se presente)
  */
 async function sendEmail(to, subject, message, filePathTemp = null) {
   const transporter = nodemailer.createTransport({
@@ -29,11 +30,13 @@ async function sendEmail(to, subject, message, filePathTemp = null) {
     html: message
   };
 
-  // Se c'è un allegato e il file esiste, spostalo e includilo
-  if (filePathTemp && fs.existsSync(filePathTemp)) {
-    const nomeFile = path.basename(filePathTemp);
+  let percorsoFinale = null;
+
+  if (filePathTemp) {
+    const estensione = path.extname(filePathTemp) || '.pdf';
+    const nomeFile = `allegato_${Date.now()}${estensione}`;
     const cartellaDestinazione = path.join(__dirname, '../allegati/email');
-    const percorsoFinale = path.join(cartellaDestinazione, nomeFile);
+    percorsoFinale = path.join(cartellaDestinazione, nomeFile);
 
     if (!fs.existsSync(cartellaDestinazione)) {
       fs.mkdirSync(cartellaDestinazione, { recursive: true });
@@ -45,13 +48,12 @@ async function sendEmail(to, subject, message, filePathTemp = null) {
       filename: nomeFile,
       path: percorsoFinale
     }];
-
-    // Facoltativo: utile per i log
-    mailOptions._allegatoSalvato = percorsoFinale;
   }
 
   const info = await transporter.sendMail(mailOptions);
   console.log(`📧 Email inviata a ${to}: ${info.response}`);
+
+  return percorsoFinale ? `allegati/email/${path.basename(percorsoFinale)}` : '';
 }
 
 module.exports = { sendEmail };
