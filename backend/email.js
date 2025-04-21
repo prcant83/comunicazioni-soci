@@ -7,11 +7,12 @@ require('dotenv').config();
  * Invia un'email con o senza allegato
  * @param {string} to - Destinatario
  * @param {string} subject - Oggetto
- * @param {string} message - Corpo HTML
- * @param {string|null} filePathTemp - Percorso file temporaneo
- * @returns {Promise<string>} - Path dell'allegato salvato (vuoto se non presente)
+ * @param {string} message - Corpo HTML del messaggio
+ * @param {string|null} filePathTemp - Percorso temporaneo dell’allegato (se presente)
+ * @param {string|null} originalName - Nome originale del file (es. img.jpg)
+ * @returns {Promise<void>}
  */
-async function sendEmail(to, subject, message, filePathTemp = null) {
+async function sendEmail(to, subject, message, filePathTemp = null, originalName = null) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT),
@@ -29,32 +30,28 @@ async function sendEmail(to, subject, message, filePathTemp = null) {
     html: message
   };
 
-  let percorsoFinale = '';
-
-  if (filePathTemp) {
-    const nomeFile = `allegato_${Date.now()}${path.extname(filePathTemp) || '.dat'}`;
+  if (filePathTemp && originalName) {
+    const estensione = path.extname(originalName) || '.dat';
+    const nomeFile = `allegato_${Date.now()}${estensione}`;
     const cartellaDestinazione = path.join(__dirname, '../allegati/email');
-    percorsoFinale = path.join(cartellaDestinazione, nomeFile);
+    const percorsoFinale = path.join(cartellaDestinazione, nomeFile);
 
-    // Crea cartella se non esiste
     if (!fs.existsSync(cartellaDestinazione)) {
       fs.mkdirSync(cartellaDestinazione, { recursive: true });
     }
 
-    // Copia il file al percorso finale
-    fs.copyFileSync(filePathTemp, percorsoFinale);
-    fs.unlinkSync(filePathTemp); // Rimuove file tmp
+    fs.renameSync(filePathTemp, percorsoFinale);
 
     mailOptions.attachments = [{
       filename: nomeFile,
       path: percorsoFinale
     }];
+
+    mailOptions._allegatoSalvato = `allegati/email/${nomeFile}`;
   }
 
   const info = await transporter.sendMail(mailOptions);
   console.log(`📧 Email inviata a ${to}: ${info.response}`);
-
-  return percorsoFinale ? `allegati/email/${path.basename(percorsoFinale)}` : '';
 }
 
 module.exports = { sendEmail };
