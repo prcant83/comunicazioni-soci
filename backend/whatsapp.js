@@ -12,7 +12,7 @@ const client = new Client({
   }
 });
 
-// Avvia il client
+// Avvia il client WhatsApp
 function startWhatsApp() {
   client.on('qr', (qr) => {
     console.log('🔐 Scansiona il QR Code per accedere a WhatsApp');
@@ -57,13 +57,16 @@ async function sendWhatsApp(to, messaggio, allegatoPath = null) {
   console.log(`📨 Messaggio WhatsApp inviato a ${to}`);
 }
 
-// Funzione per dedurre il tipo MIME
+// Deduci il tipo MIME da estensione file
 function getMimeType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
-  if (ext === '.pdf') return 'application/pdf';
-  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
-  if (ext === '.png') return 'image/png';
-  return 'application/octet-stream';
+  switch (ext) {
+    case '.pdf': return 'application/pdf';
+    case '.jpg':
+    case '.jpeg': return 'image/jpeg';
+    case '.png': return 'image/png';
+    default: return 'application/octet-stream';
+  }
 }
 
 module.exports = { startWhatsApp, sendWhatsApp };
