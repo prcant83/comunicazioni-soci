@@ -10,7 +10,7 @@
   <main class="container">
     <h1 class="title">📧 Invia Email</h1>
 
-    <form id="emailForm" class="form-section">
+    <form id="emailForm" class="form-section" enctype="multipart/form-data">
       <label for="destinatario">Destinatario (email o rubrica):</label>
       <select id="destinatario" name="destinatario" required>
         <option value="">-- Seleziona rubrica o email singola --</option>
@@ -27,6 +27,9 @@
 
       <label for="messaggio">Messaggio:</label>
       <textarea id="messaggio" name="messaggio" rows="6" required></textarea>
+
+      <label for="allegato">📎 Allegato (PDF, JPG, PNG):</label>
+      <input type="file" id="allegato" name="allegato" accept=".pdf,.jpg,.jpeg,.png" />
 
       <button type="submit">📤 Invia Email</button>
     </form>
@@ -59,23 +62,22 @@
     document.getElementById('emailForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
-      const rubrica = form.destinatario.value;
-      const subject = form.oggetto.value;
-      const message = form.messaggio.value;
-      const payload = { subject, message };
+      const formData = new FormData(form);
 
-      if (rubrica === '__singola__') {
+      if (form.destinatario.value === '__singola__') {
         const to = form.email.value.trim();
         if (!to) return alert("Inserisci un indirizzo email valido.");
-        payload.to = to;
+        formData.append('to', to);
       } else {
-        payload.rubrica = rubrica;
+        formData.append('rubrica', form.destinatario.value);
       }
+
+      formData.append('subject', form.oggetto.value);
+      formData.append('message', form.messaggio.value);
 
       const res = await fetch('/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: formData
       });
 
       const esito = document.getElementById('esito');
