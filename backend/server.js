@@ -30,7 +30,7 @@ app.use('/allegati/email', express.static(path.join(__dirname, 'allegati/email')
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
 
-// CSV Import
+// 📥 Import CSV
 app.post('/upload', upload.single('file'), (req, res) => {
   const results = [];
   const rubrica = req.body.rubrica || 'Generica';
@@ -57,7 +57,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// Invia Email (con allegato)
+// 📧 Invia Email
 app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const { to, subject, message, rubrica } = req.body;
   const fileTempPath = req.file ? req.file.path : null;
@@ -65,7 +65,7 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const invia = async (dest) => {
     try {
       await sendEmail(dest, subject, message, fileTempPath);
-      salvaLogInvio('email', dest, message, rubrica || null, ''); // Allegato loggato da email.js
+      salvaLogInvio('email', dest, message, rubrica || null, ''); // Allegato loggato in email.js
     } catch (err) {
       console.error(`❌ Errore invio email a ${dest}:`, err.message);
       salvaLogInvio('email', dest, `ERRORE: ${err.message}`, rubrica || null);
@@ -92,7 +92,7 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
   }
 });
 
-// Rubriche
+// 📚 Rubriche
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
@@ -114,7 +114,7 @@ app.delete('/rubriche/:nome', (req, res) => {
   });
 });
 
-// Contatti
+// 👤 Contatti
 app.delete('/rubriche/contatto/:id', (req, res) => {
   db.run("DELETE FROM soci WHERE id = ?", [req.params.id], function (err) {
     if (err) return res.status(500).send('Errore eliminazione contatto');
@@ -142,7 +142,7 @@ app.put('/rubriche/contatto/:id', (req, res) => {
     });
 });
 
-// Log
+// 📜 Log
 app.get('/api/log', (req, res) => {
   db.all("SELECT * FROM log_invio ORDER BY id DESC", [], (err, rows) => {
     if (err) return res.status(500).send('Errore recupero log');
@@ -150,7 +150,7 @@ app.get('/api/log', (req, res) => {
   });
 });
 
-// Invia WhatsApp (con allegato)
+// 💬 Invia WhatsApp (con allegato)
 app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   const { rubrica, messaggio } = req.body;
   let percorsoAllegato = '';
@@ -190,7 +190,7 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   });
 });
 
-// Avvio server
+// ▶️ Avvio server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
