@@ -162,3 +162,43 @@ app.get('/api/log', (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
+// Invia WhatsApp (con allegato)
+app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
+  const { rubrica, messaggio } = req.body;
+  let percorsoAllegato = '';
+
+  if (req.file) {
+    const estensione = path.extname(req.file.originalname);
+    const nomeUnico = `wa_${Date.now()}${estensione}`;
+    const destinazione = path.join(__dirname, 'allegati/whatsapp', nomeUnico);
+    fs.renameSync(req.file.path, destinazione);
+    percorsoAllegato = `allegati/whatsapp/${nomeUnico}`;
+  }
+
+  const { sendWhatsApp } = require('./whatsapp');
+
+  const invia = async (numero) => {
+    try {
+      await sendWhatsApp(numero, messaggio, percorsoAllegato ? path.join(__dirname, percorsoAllegato) : null);
+      salvaLogInvio('whatsapp', numero, messaggio, rubrica || null, percorsoAllegato || '');
+    } catch (err) {
+      console.error(`❌ Errore invio WhatsApp a ${numero}:`, err.message);
+      salvaLogInvio('whatsapp', numero, `ERRORE: ${err.message}`, rubrica || null);
+    }
+  };
+
+  if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
+
+  db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
+    if (err) return res.status(500).send('Errore DB');
+    if (!rows.length) return res.status(404).send('Rubrica vuota');
+
+    for (const row of rows) {
+      await invia(row.telefono);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
+    res.send('✅ Messaggi WhatsApp inviati con successo');
+  });
+});
+
