@@ -41,8 +41,10 @@ EOL
 echo "🛠️  File .env creato (modifica le credenziali SMTP)"
 fi
 
-# Crea cartella DB
+# Crea cartelle necessarie
 mkdir -p database
+mkdir -p allegati/email
+mkdir -p allegati/whatsapp
 
 # ⚙️ Aggiorna struttura tabella soci rimuovendo "cognome"
 echo "📐 Aggiorno struttura tabella soci..."
