@@ -10,7 +10,7 @@ require('dotenv').config();
  * @param {string} message - Corpo HTML del messaggio
  * @param {string|null} filePathTemp - Percorso temporaneo dell’allegato (se presente)
  * @param {string|null} originalName - Nome originale del file (es. img.jpg)
- * @returns {Promise<void>}
+ * @returns {Promise<string>} - Percorso dell’allegato salvato per logging
  */
 async function sendEmail(to, subject, message, filePathTemp = null, originalName = null) {
   const transporter = nodemailer.createTransport({
@@ -30,6 +30,8 @@ async function sendEmail(to, subject, message, filePathTemp = null, originalName
     html: message
   };
 
+  let allegatoSalvato = '';
+
   if (filePathTemp && originalName) {
     const estensione = path.extname(originalName) || '.dat';
     const nomeFile = `allegato_${Date.now()}${estensione}`;
@@ -47,11 +49,13 @@ async function sendEmail(to, subject, message, filePathTemp = null, originalName
       path: percorsoFinale
     }];
 
-    mailOptions._allegatoSalvato = `allegati/email/${nomeFile}`;
+    allegatoSalvato = `allegati/email/${nomeFile}`;
   }
 
   const info = await transporter.sendMail(mailOptions);
   console.log(`📧 Email inviata a ${to}: ${info.response}`);
+
+  return allegatoSalvato; // 👈 questo permette di loggare correttamente il file
 }
 
 module.exports = { sendEmail };
