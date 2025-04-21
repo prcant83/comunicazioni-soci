@@ -4,24 +4,28 @@
   <meta charset="UTF-8">
   <title>Log Invii</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-    h1 { text-align: center; }
-
-    #filtro-container {
-      text-align: center;
-      margin-bottom: 20px;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
     }
 
-    select {
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    #filtroTipo {
+      display: block;
+      margin: 0 auto 20px auto;
+      font-size: 16px;
       padding: 6px 10px;
-      font-size: 14px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
-      background-color: white;
+      background-color: #fff;
     }
 
     th, td {
@@ -29,7 +33,6 @@
       padding: 8px;
       text-align: left;
       vertical-align: top;
-      word-break: break-word;
     }
 
     th {
@@ -40,16 +43,27 @@
       background-color: #f9f9f9;
     }
 
-    a.back-link {
-      display: block;
-      margin-top: 20px;
-      text-align: center;
-      text-decoration: none;
+    a {
       color: #007BFF;
+      text-decoration: none;
     }
 
-    a.back-link:hover {
+    a:hover {
       text-decoration: underline;
+    }
+
+    img.preview {
+      max-width: 100px;
+      max-height: 100px;
+      display: block;
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #007BFF;
     }
   </style>
 </head>
@@ -57,15 +71,12 @@
 
   <h1>📋 Log degli Invii</h1>
 
-  <div id="filtro-container">
-    <label for="filtro">Filtra per tipo:</label>
-    <select id="filtro" onchange="caricaLog()">
-      <option value="">Tutti</option>
-      <option value="email">Email</option>
-      <option value="whatsapp">WhatsApp</option>
-      <option value="sms">SMS</option>
-    </select>
-  </div>
+  <select id="filtroTipo">
+    <option value="">Tutti i tipi</option>
+    <option value="email">📧 Email</option>
+    <option value="whatsapp">💬 WhatsApp</option>
+    <option value="sms">📱 SMS</option>
+  </select>
 
   <table>
     <thead>
@@ -86,7 +97,7 @@
 
   <script>
     function escapeHTML(str) {
-      return String(str).replace(/[&<>'"]/g, function (char) {
+      return str.replace(/[&<>'"]/g, function (char) {
         const escapeChars = {
           '&': '&amp;',
           '<': '&lt;',
@@ -98,22 +109,30 @@
       });
     }
 
-    function caricaLog() {
-      const filtro = document.getElementById('filtro').value;
-      const url = filtro ? `/api/log?tipo=${filtro}` : '/api/log';
-
+    function caricaLog(tipo = '') {
+      const url = tipo ? `/api/log?tipo=${tipo}` : '/api/log';
       fetch(url)
         .then(res => res.json())
         .then(data => {
           const tbody = document.getElementById('logTableBody');
-          tbody.innerHTML = ''; // pulisci tabella
+          tbody.innerHTML = ''; // reset
 
           data.forEach(log => {
             const tr = document.createElement('tr');
 
-            const allegatoHTML = log.allegato
-              ? `<a href="/${escapeHTML(log.allegato)}" target="_blank">📎 Apri</a>`
-              : '';
+            let allegatoHTML = '';
+            if (log.allegato) {
+              const ext = log.allegato.split('.').pop().toLowerCase();
+              if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                allegatoHTML = `<a href="/${log.allegato}" target="_blank">
+                                  <img src="/${log.allegato}" class="preview" alt="img">
+                                </a>`;
+              } else if (ext === 'pdf') {
+                allegatoHTML = `<a href="/${log.allegato}" target="_blank">📄 PDF</a>`;
+              } else {
+                allegatoHTML = `<a href="/${log.allegato}" target="_blank">📎 Scarica</a>`;
+              }
+            }
 
             tr.innerHTML = `
               <td>${log.id}</td>
@@ -124,14 +143,17 @@
               <td>${escapeHTML(log.messaggio)}</td>
               <td>${allegatoHTML}</td>
             `;
-
             tbody.appendChild(tr);
           });
         });
     }
 
-    // Carica i log iniziali
-    window.onload = caricaLog;
+    document.getElementById('filtroTipo').addEventListener('change', function () {
+      caricaLog(this.value);
+    });
+
+    // Caricamento iniziale
+    caricaLog();
   </script>
 </body>
 </html>
