@@ -40,7 +40,9 @@ async function sendWhatsApp(to, messaggio, allegatoPath = null) {
     throw new Error('Client WhatsApp non pronto.');
   }
 
-  const numero = to.replace(/\D/g, '') + '@c.us';
+  const numero = to.startsWith('+')
+    ? to.replace(/\D/g, '') + '@c.us'
+    : '39' + to.replace(/\D/g, '') + '@c.us';
 
   if (allegatoPath && fs.existsSync(allegatoPath)) {
     const fileBuffer = fs.readFileSync(allegatoPath);
