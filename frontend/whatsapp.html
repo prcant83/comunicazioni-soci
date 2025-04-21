@@ -5,22 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Invia WhatsApp</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .progress-bar {
+      width: 100%;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .progress-bar-inner {
+      height: 20px;
+      background-color: #25D366;
+      width: 0%;
+      color: white;
+      text-align: center;
+      line-height: 20px;
+      transition: width 0.3s;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>📱 Invia Messaggio WhatsApp</h1>
+
     <form id="whatsappForm">
       <label for="rubrica">Rubrica:</label>
-      <select id="rubrica" name="rubrica">
+      <select id="rubrica" name="rubrica" required>
         <option value="">-- Seleziona Rubrica --</option>
       </select>
 
       <label for="messaggio">Messaggio:</label>
-      <textarea id="messaggio" name="messaggio" rows="4" placeholder="Scrivi qui il messaggio..."></textarea>
+      <textarea id="messaggio" name="messaggio" rows="4" placeholder="Scrivi qui il messaggio..." required></textarea>
 
       <button type="submit">📤 Invia WhatsApp</button>
     </form>
-    <p id="risultato" class="status"></p>
+
+    <div class="progress-bar" id="progressContainer">
+      <div class="progress-bar-inner" id="progressBar">0%</div>
+    </div>
+
+    <p id="risultato" class="status" style="margin-top: 15px;"></p>
     <a href="index.html" class="back-link">← Torna alla Home</a>
   </div>
 
@@ -39,17 +65,63 @@
 
     document.getElementById('whatsappForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const rubrica = document.getElementById('rubrica').value;
-      const messaggio = document.getElementById('messaggio').value;
 
-      const res = await fetch('/send-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rubrica, messaggio })
-      });
+      const form = e.target;
+      const rubrica = form.rubrica.value;
+      const messaggio = form.messaggio.value;
+      const esito = document.getElementById('risultato');
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
 
-      const testo = await res.text();
-      document.getElementById('risultato').textContent = testo;
+      if (!rubrica || !messaggio.trim()) {
+        esito.textContent = '❌ Compila tutti i campi.';
+        return;
+      }
+
+      // Blocca invio e resetta UI
+      form.querySelector('button').disabled = true;
+      esito.textContent = '';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+      progressContainer.style.display = 'block';
+
+      try {
+        const contattiRes = await fetch(`/rubriche/${encodeURIComponent(rubrica)}`);
+        const contatti = await contattiRes.json();
+
+        if (!contatti.length) {
+          esito.textContent = '❌ Nessun contatto nella rubrica selezionata.';
+          progressContainer.style.display = 'none';
+          form.querySelector('button').disabled = false;
+          return;
+        }
+
+        let inviati = 0;
+        for (const contatto of contatti) {
+          const res = await fetch('/send-whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rubrica,
+              telefono: contatto.telefono,
+              messaggio
+            })
+          });
+
+          inviati++;
+          const percent = Math.round((inviati / contatti.length) * 100);
+          progressBar.style.width = `${percent}%`;
+          progressBar.textContent = `${percent}%`;
+
+          await new Promise(resolve => setTimeout(resolve, 3000)); // Delay tra invii
+        }
+
+        esito.textContent = '✅ Messaggi WhatsApp inviati a tutta la rubrica!';
+      } catch (err) {
+        esito.textContent = `❌ Errore: ${err.message}`;
+      }
+
+      form.querySelector('button').disabled = false;
     });
 
     caricaRubriche();
