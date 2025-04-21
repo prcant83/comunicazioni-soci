@@ -30,7 +30,7 @@
   <div class="container">
     <h1>📱 Invia Messaggio WhatsApp</h1>
 
-    <form id="whatsappForm">
+    <form id="whatsappForm" enctype="multipart/form-data">
       <label for="rubrica">Rubrica:</label>
       <select id="rubrica" name="rubrica" required>
         <option value="">-- Seleziona Rubrica --</option>
@@ -38,6 +38,9 @@
 
       <label for="messaggio">Messaggio:</label>
       <textarea id="messaggio" name="messaggio" rows="4" placeholder="Scrivi qui il messaggio..." required></textarea>
+
+      <label for="allegato">📎 Allegato (PDF/JPG/PNG):</label>
+      <input type="file" id="allegato" name="allegato" accept=".pdf,.jpg,.jpeg,.png" />
 
       <button type="submit">📤 Invia WhatsApp</button>
     </form>
@@ -69,6 +72,7 @@
       const form = e.target;
       const rubrica = form.rubrica.value;
       const messaggio = form.messaggio.value;
+      const allegato = form.allegato.files[0];
       const esito = document.getElementById('risultato');
       const progressContainer = document.getElementById('progressContainer');
       const progressBar = document.getElementById('progressBar');
@@ -78,7 +82,6 @@
         return;
       }
 
-      // Blocca invio e resetta UI
       form.querySelector('button').disabled = true;
       esito.textContent = '';
       progressBar.style.width = '0%';
@@ -98,14 +101,17 @@
 
         let inviati = 0;
         for (const contatto of contatti) {
-          const res = await fetch('/send-whatsapp', {
+          const formData = new FormData();
+          formData.append('rubrica', rubrica);
+          formData.append('messaggio', messaggio);
+          formData.append('telefono', contatto.telefono);
+          if (allegato) {
+            formData.append('allegato', allegato);
+          }
+
+          await fetch('/send-whatsapp', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              rubrica,
-              telefono: contatto.telefono,
-              messaggio
-            })
+            body: formData
           });
 
           inviati++;
@@ -113,7 +119,7 @@
           progressBar.style.width = `${percent}%`;
           progressBar.textContent = `${percent}%`;
 
-          await new Promise(resolve => setTimeout(resolve, 3000)); // Delay tra invii
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
 
         esito.textContent = '✅ Messaggi WhatsApp inviati a tutta la rubrica!';
