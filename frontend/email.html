@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Invia Email</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .progress-bar {
+      width: 100%;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .progress-bar-inner {
+      height: 20px;
+      background-color: #4caf50;
+      width: 0%;
+      color: white;
+      text-align: center;
+      line-height: 20px;
+      transition: width 0.3s;
+    }
+  </style>
 </head>
 <body>
   <main class="container">
@@ -33,6 +53,10 @@
 
       <button type="submit">📤 Invia Email</button>
     </form>
+
+    <div class="progress-bar" id="progressContainer">
+      <div class="progress-bar-inner" id="progressBar">0%</div>
+    </div>
 
     <div id="esito" class="result" style="margin-top: 15px; text-align: center;"></div>
   </main>
@@ -64,6 +88,15 @@
       const form = e.target;
       const formData = new FormData(form);
 
+      const progressBar = document.getElementById('progressBar');
+      const progressContainer = document.getElementById('progressContainer');
+      const esito = document.getElementById('esito');
+      esito.textContent = '';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+      progressContainer.style.display = 'block';
+      form.querySelector('button').disabled = true;
+
       if (form.destinatario.value === '__singola__') {
         const to = form.email.value.trim();
         if (!to) return alert("Inserisci un indirizzo email valido.");
@@ -75,20 +108,36 @@
       formData.append('subject', form.oggetto.value);
       formData.append('message', form.messaggio.value);
 
-      const res = await fetch('/send-email', {
-        method: 'POST',
-        body: formData
-      });
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/send-email', true);
 
-      const esito = document.getElementById('esito');
-      if (res.ok) {
-        esito.textContent = '✅ Email inviata con successo!';
-        form.reset();
-        document.getElementById('emailSingola').style.display = 'none';
-      } else {
-        const err = await res.text();
-        esito.textContent = `❌ Errore: ${err}`;
-      }
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          progressBar.style.width = percent + '%';
+          progressBar.textContent = percent + '%';
+        }
+      };
+
+      xhr.onload = function () {
+        form.querySelector('button').disabled = false;
+        progressBar.style.width = '100%';
+        progressBar.textContent = '100%';
+        if (xhr.status === 200) {
+          esito.textContent = '✅ Email inviata con successo!';
+          form.reset();
+          document.getElementById('emailSingola').style.display = 'none';
+        } else {
+          esito.textContent = `❌ Errore: ${xhr.responseText}`;
+        }
+      };
+
+      xhr.onerror = function () {
+        form.querySelector('button').disabled = false;
+        esito.textContent = '❌ Errore di rete.';
+      };
+
+      xhr.send(formData);
     });
 
     caricaRubriche();
