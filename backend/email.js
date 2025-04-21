@@ -1,4 +1,3 @@
-// backend/email.js
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
@@ -8,9 +7,9 @@ require('dotenv').config();
  * Invia un'email con o senza allegato
  * @param {string} to - Destinatario
  * @param {string} subject - Oggetto
- * @param {string} message - Corpo HTML del messaggio
- * @param {string|null} filePathTemp - Percorso temporaneo dell’allegato (se presente)
- * @returns {Promise<string|null>} - Percorso del file allegato salvato (se presente)
+ * @param {string} message - Corpo HTML
+ * @param {string|null} filePathTemp - Percorso file temporaneo
+ * @returns {Promise<string>} - Path dell'allegato salvato (vuoto se non presente)
  */
 async function sendEmail(to, subject, message, filePathTemp = null) {
   const transporter = nodemailer.createTransport({
@@ -30,19 +29,21 @@ async function sendEmail(to, subject, message, filePathTemp = null) {
     html: message
   };
 
-  let percorsoFinale = null;
+  let percorsoFinale = '';
 
   if (filePathTemp) {
-    const estensione = path.extname(filePathTemp) || '.pdf';
-    const nomeFile = `allegato_${Date.now()}${estensione}`;
+    const nomeFile = `allegato_${Date.now()}${path.extname(filePathTemp) || '.dat'}`;
     const cartellaDestinazione = path.join(__dirname, '../allegati/email');
     percorsoFinale = path.join(cartellaDestinazione, nomeFile);
 
+    // Crea cartella se non esiste
     if (!fs.existsSync(cartellaDestinazione)) {
       fs.mkdirSync(cartellaDestinazione, { recursive: true });
     }
 
-    fs.renameSync(filePathTemp, percorsoFinale);
+    // Copia il file al percorso finale
+    fs.copyFileSync(filePathTemp, percorsoFinale);
+    fs.unlinkSync(filePathTemp); // Rimuove file tmp
 
     mailOptions.attachments = [{
       filename: nomeFile,
