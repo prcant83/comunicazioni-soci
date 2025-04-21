@@ -56,3 +56,6 @@ async function sendEmail(to, subject, message, filePathTemp = null) {
 
   const info = await transporter.sendMail(mailOptions);
   console.log(`📧 Email inviata a ${to}: ${info.response}`);
+}
+
+module.exports = { sendEmail };
