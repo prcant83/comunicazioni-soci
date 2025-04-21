@@ -1,10 +1,16 @@
 #!/bin/bash
 echo "🔧 Inizio installazione guidata comunicazioni-soci..."
 
-# Clonazione repository se non presente
+# Clonazione repository o aggiornamento
 if [ ! -d "comunicazioni-soci" ]; then
   echo "📦 Clonazione del repository da GitHub..."
   git clone https://github.com/prcant83/comunicazioni-soci.git
+else
+  echo "🔄 Repository già presente, controllo aggiornamenti da GitHub..."
+  cd comunicazioni-soci
+  git reset --hard HEAD
+  git pull
+  cd ..
 fi
 
 cd comunicazioni-soci
@@ -51,7 +57,6 @@ echo "📐 Aggiorno struttura tabella soci..."
 sqlite3 ./database/soci.sqlite <<EOF
 PRAGMA foreign_keys=off;
 
--- Crea nuova tabella senza la colonna cognome
 CREATE TABLE IF NOT EXISTS soci_nuova (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nome TEXT,
@@ -60,11 +65,9 @@ CREATE TABLE IF NOT EXISTS soci_nuova (
   rubrica TEXT
 );
 
--- Copia dati esistenti
 INSERT INTO soci_nuova (id, nome, telefono, email, rubrica)
 SELECT id, nome, telefono, email, rubrica FROM soci;
 
--- Sostituisci tabella vecchia
 DROP TABLE soci;
 ALTER TABLE soci_nuova RENAME TO soci;
 
