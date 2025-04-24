@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -17,7 +18,7 @@
 
     .progress-bar-inner {
       height: 20px;
-      background-color: #4caf50;
+      background-color: #2196f3;
       width: 0%;
       color: white;
       text-align: center;
@@ -30,16 +31,16 @@
   <main class="container">
     <h1 class="title">📱 Invia SMS</h1>
 
-    <form id="smsForm" class="form-section" enctype="multipart/form-data">
-      <label for="destinatario">Destinatario (rubrica o numero singolo):</label>
+    <form id="smsForm" class="form-section">
+      <label for="destinatario">Destinatario (rubrica o singolo numero):</label>
       <select id="destinatario" name="destinatario" required>
         <option value="">-- Seleziona rubrica o numero singolo --</option>
-        <option value="__singola__">📩 SMS singolo</option>
+        <option value="__singolo__">📲 Numero singolo</option>
       </select>
 
-      <div id="smsSingolo" style="display:none;">
-        <label for="numero">Numero destinatario:</label>
-        <input type="text" id="numero" name="numero" placeholder="Es. +391234567890"/>
+      <div id="numeroSingolo" style="display:none;">
+        <label for="numero">Numero di telefono:</label>
+        <input type="text" id="numero" name="numero" placeholder="+39..." />
       </div>
 
       <label for="messaggio">Messaggio:</label>
@@ -62,75 +63,72 @@
       const select = document.getElementById('destinatario');
       rubriche.forEach(r => {
         const opt = document.createElement('option');
-        opt.value = r.rubrica;
-        opt.textContent = `📂 Rubrica: ${r.rubrica}`;
+        opt.value = r;
+        opt.textContent = `📂 Rubrica: ${r}`;
         select.appendChild(opt);
       });
     }
 
     document.getElementById('destinatario').addEventListener('change', (e) => {
-      const smsSingolo = document.getElementById('smsSingolo');
-      if (e.target.value === '__singola__') {
-        smsSingolo.style.display = 'block';
+      const numeroSingolo = document.getElementById('numeroSingolo');
+      if (e.target.value === '__singolo__') {
+        numeroSingolo.style.display = 'block';
       } else {
-        smsSingolo.style.display = 'none';
+        numeroSingolo.style.display = 'none';
       }
     });
 
     document.getElementById('smsForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
-      const formData = new FormData(form);
-
+      const esito = document.getElementById('esito');
       const progressBar = document.getElementById('progressBar');
       const progressContainer = document.getElementById('progressContainer');
-      const esito = document.getElementById('esito');
+
       esito.textContent = '';
       progressBar.style.width = '0%';
       progressBar.textContent = '0%';
       progressContainer.style.display = 'block';
       form.querySelector('button').disabled = true;
 
-      if (form.destinatario.value === '__singola__') {
+      let body = { messaggio: form.messaggio.value };
+
+      if (form.destinatario.value === '__singolo__') {
         const numero = form.numero.value.trim();
-        if (!numero) return alert("Inserisci un numero valido.");
-        formData.append('to', numero);
+        if (!numero) {
+          alert("Inserisci un numero di telefono valido.");
+          form.querySelector('button').disabled = false;
+          return;
+        }
+        await fetch('/send-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rubrica: null, messaggio: form.messaggio.value, numero })
+        }).then(res => res.text()).then(msg => {
+          progressBar.style.width = '100%';
+          progressBar.textContent = '100%';
+          esito.textContent = msg;
+        }).catch(err => {
+          esito.textContent = '❌ Errore di rete.';
+        }).finally(() => {
+          form.querySelector('button').disabled = false;
+        });
       } else {
-        formData.append('rubrica', form.destinatario.value);
+        body.rubrica = form.destinatario.value;
+        await fetch('/send-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }).then(res => res.text()).then(msg => {
+          progressBar.style.width = '100%';
+          progressBar.textContent = '100%';
+          esito.textContent = msg;
+        }).catch(err => {
+          esito.textContent = '❌ Errore di rete.';
+        }).finally(() => {
+          form.querySelector('button').disabled = false;
+        });
       }
-
-      formData.append('messaggio', form.messaggio.value);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/send-sms', true);
-
-      xhr.upload.onprogress = function (e) {
-        if (e.lengthComputable) {
-          const percent = Math.round((e.loaded / e.total) * 100);
-          progressBar.style.width = percent + '%';
-          progressBar.textContent = percent + '%';
-        }
-      };
-
-      xhr.onload = function () {
-        form.querySelector('button').disabled = false;
-        progressBar.style.width = '100%';
-        progressBar.textContent = '100%';
-        if (xhr.status === 200) {
-          esito.textContent = '✅ SMS inviato con successo!';
-          form.reset();
-          document.getElementById('smsSingolo').style.display = 'none';
-        } else {
-          esito.textContent = `❌ Errore: ${xhr.responseText}`;
-        }
-      };
-
-      xhr.onerror = function () {
-        form.querySelector('button').disabled = false;
-        esito.textContent = '❌ Errore di rete.';
-      };
-
-      xhr.send(formData);
     });
 
     caricaRubriche();
