@@ -201,17 +201,22 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
 
 // 📱 Invia SMS
 app.post('/send-sms', async (req, res) => {
-  const { rubrica, messaggio } = req.body;
+  const { rubrica, messaggio, numero } = req.body;
 
-  const invia = async (numero) => {
+  const invia = async (numeroDest) => {
     try {
-      await sendSMS(numero, messaggio);
-      salvaLogInvio('sms', numero, messaggio, rubrica || null, '');
+      await sendSMS(numeroDest, messaggio);
+      salvaLogInvio('sms', numeroDest, messaggio, rubrica || null, '');
     } catch (err) {
-      console.error(`❌ Errore invio SMS a ${numero}:`, err.message);
-      salvaLogInvio('sms', numero, `ERRORE: ${err.message}`, rubrica || null);
+      console.error(`❌ Errore invio SMS a ${numeroDest}:`, err.message);
+      salvaLogInvio('sms', numeroDest, `ERRORE: ${err.message}`, rubrica || null);
     }
   };
+
+  if (numero) {
+    await invia(numero);
+    return res.send('✅ SMS inviato al numero specificato');
+  }
 
   if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
 
@@ -227,6 +232,7 @@ app.post('/send-sms', async (req, res) => {
     res.send('✅ Messaggi SMS inviati con successo');
   });
 });
+
 
 // ▶️ Avvio server
 app.listen(PORT, () => {
