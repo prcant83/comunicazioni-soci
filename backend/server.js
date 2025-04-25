@@ -4,9 +4,10 @@ const multer = require('multer');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const csv = require('csv-parser');
+const { exec } = require('child_process');
 const { sendEmail } = require('./email');
 const { startWhatsApp } = require('./whatsapp');
-const { sendSMS } = require('./sms'); // Importa la funzione sendSMS per SMS
+const { sendSMS } = require('./sms');
 const { salvaLogInvio } = require('./utils/log');
 require('dotenv').config();
 
@@ -148,10 +149,11 @@ app.put('/rubriche/contatto/:id', (req, res) => {
 // 📜 Log con filtro tipo (email, whatsapp, sms)
 app.get('/api/log', (req, res) => {
   const tipo = req.query.tipo;
+  const limit = parseInt(req.query.limit) || 100;
   const sql = tipo
-    ? "SELECT * FROM log_invio WHERE tipo = ? ORDER BY id DESC"
-    : "SELECT * FROM log_invio ORDER BY id DESC";
-  const params = tipo ? [tipo] : [];
+    ? "SELECT * FROM log_invio WHERE tipo = ? ORDER BY id DESC LIMIT ?"
+    : "SELECT * FROM log_invio ORDER BY id DESC LIMIT ?";
+  const params = tipo ? [tipo, limit] : [limit];
 
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).send('Errore recupero log');
@@ -233,6 +235,24 @@ app.post('/send-sms', async (req, res) => {
   });
 });
 
+// 📟 Stato: QR WhatsApp
+app.get('/api/stato/whatsapp-qr', (req, res) => {
+  const qrPath = path.join(__dirname, '../session/Default/qrcode.png');
+  if (fs.existsSync(qrPath)) {
+    const qrBase64 = fs.readFileSync(qrPath, { encoding: 'base64' });
+    return res.json({ qrCode: qrBase64 });
+  } else {
+    return res.json({ qrCode: null });
+  }
+});
+
+// 📶 Stato: Segnale GSM
+app.get('/api/stato/gsm-signal', (req, res) => {
+  exec('gammu --identify', (err, stdout, stderr) => {
+    if (err) return res.json({ risposta: 'Errore: ' + (stderr || err.message) });
+    return res.json({ risposta: stdout.trim() });
+  });
+});
 
 // ▶️ Avvio server
 app.listen(PORT, () => {
