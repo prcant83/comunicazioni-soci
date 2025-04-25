@@ -1,5 +1,6 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 
@@ -27,8 +28,18 @@ function startWhatsApp() {
     qrcode.generate(qr, { small: true });
 
     // Salva QR come immagine
-    const QRCode = require('qrcode');
-    QRCode.toFile(path.join(__dirname, '../session/Default/qrcode.png'), qr);
+    const dir = path.join(__dirname, '../session/Default');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const qrPath = path.join(dir, 'qrcode.png');
+    QRCode.toFile(qrPath, qr, (err) => {
+      if (err) {
+        console.error('❌ Errore salvataggio QR Code:', err);
+      } else {
+        console.log('🖼️ QR Code salvato in:', qrPath);
+      }
+    });
   });
 
   client.on('ready', () => {
