@@ -1,1 +1,44 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stato Sistema</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1 class="title">📊 Stato del Sistema</h1>
 
+    <div id="statoGSM">📶 Segnale GSM: ...</div>
+    <div id="qrCodeArea" style="margin-top: 15px;"></div>
+    <h2>📋 Ultimi Log</h2>
+    <ul id="logList"></ul>
+  </main>
+
+  <script>
+    async function aggiornaStato() {
+      const res = await fetch('/stato');
+      const dati = await res.json();
+
+      document.getElementById('statoGSM').textContent = `📶 Segnale GSM: ${dati.segnaleGSM}`;
+
+      const qrCodeDiv = document.getElementById('qrCodeArea');
+      qrCodeDiv.innerHTML = dati.qrCodePresente
+        ? '<img src="/session/Default/qrcode.png" alt="QR WhatsApp" width="200" />'
+        : '❌ QR Code non disponibile';
+
+      const logList = document.getElementById('logList');
+      logList.innerHTML = '';
+      dati.ultimiLog.forEach(log => {
+        const li = document.createElement('li');
+        li.textContent = `[${log.data}] ${log.tipo.toUpperCase()} → ${log.destinatario}: ${log.messaggio}`;
+        logList.appendChild(li);
+      });
+    }
+
+    aggiornaStato();
+    setInterval(aggiornaStato, 15000);
+  </script>
+</body>
+</html>
