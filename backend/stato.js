@@ -1,49 +1,64 @@
-// backend/stato.js
-
 async function aggiornaStato() {
   const qr = document.getElementById('qr');
   const segnale = document.getElementById('segnale');
-  const modem = document.getElementById('modem');
+  const tacche = document.getElementById('taccheSegnale');
+  const sim = document.getElementById('moduloSIM');
   const log = document.getElementById('log');
 
   try {
-    // WhatsApp
+    // QR WhatsApp
     const qrRes = await fetch('/api/stato/whatsapp-qr');
     const qrJson = await qrRes.json();
-    qr.innerHTML = qrJson.qrCode
-      ? `<img src="data:image/png;base64,${qrJson.qrCode}" alt="QR Code WhatsApp" style="max-width:300px;">`
-      : qrJson.pronto
-        ? '<span style="color:green;">✅ WhatsApp connesso</span>'
-        : `<span style="color:red;">❌ Errore: ${qrJson.errore || 'Stato non disponibile'}</span>`;
-
-    // GSM Info
-    const modemRes = await fetch('/api/stato/gsm-modem');
-    const modemJson = await modemRes.json();
-    modem.textContent = modemJson.risposta || '❌ Nessuna info dal modem.';
+    if (qrJson.pronto) {
+      qr.innerHTML = '<p style="color:green;">✅ WhatsApp connesso</p>';
+    } else if (qrJson.qrCode) {
+      qr.innerHTML = `<img src="data:image/png;base64,${qrJson.qrCode}" alt="QR Code WhatsApp" style="max-width:300px;">`;
+    } else {
+      qr.innerHTML = `<p style="color:red;">❌ WhatsApp non connesso</p>`;
+    }
 
     // Segnale GSM
     const segnaleRes = await fetch('/api/stato/gsm-signal');
     const segnaleJson = await segnaleRes.json();
-    if (segnaleJson.percentuale !== null) {
-      const tacche = Math.round(segnaleJson.percentuale / 20);
-      const icone = '📶'.repeat(tacche) + '▫️'.repeat(5 - tacche);
-      segnale.innerHTML = `${icone} ${segnaleJson.percentuale}%`;
-    } else {
-      segnale.innerHTML = '❌ Nessun segnale GSM';
+    const risposta = segnaleJson.risposta || '';
+
+    segnale.textContent = risposta;
+
+    // Tacche segnale (semplificate)
+    const match = risposta.match(/Signal strength\s*:\s*(\d+)\s*/i);
+    const livello = match ? parseInt(match[1]) : -1;
+    let nTacche = 0;
+
+    if (livello >= 20) nTacche = 5;
+    else if (livello >= 15) nTacche = 4;
+    else if (livello >= 10) nTacche = 3;
+    else if (livello >= 5) nTacche = 2;
+    else if (livello >= 1) nTacche = 1;
+
+    tacche.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const div = document.createElement('div');
+      div.classList.add('tacca');
+      if (i <= nTacche) div.classList.add('attiva');
+      tacche.appendChild(div);
     }
+
+    // SIM collegata
+    sim.textContent = risposta.includes('/dev/ttyUSB') ? '📟 SIM800C rilevato' : '❌ Nessun dispositivo USB trovato';
 
     // Log ultimi 10
     const logRes = await fetch('/api/log?limit=10');
     const logs = await logRes.json();
     log.innerHTML = logs.length
-      ? logs.map(e => `<li style="color:${e.messaggio.startsWith('ERRORE') ? 'red' : 'black'}">[${e.data}] <b>${e.tipo.toUpperCase()}</b>: ${e.destinatario} → ${e.messaggio}</li>`).join('')
+      ? logs.map(e => `<li>[${e.data}] <b>${e.tipo.toUpperCase()}</b>: ${e.destinatario} → ${e.messaggio}</li>`).join('')
       : '<li>Nessun log recente.</li>';
 
   } catch (err) {
-    qr.innerHTML = '<p style="color:red;">Errore QR</p>';
-    modem.textContent = 'Errore modem.';
-    segnale.textContent = 'Errore segnale.';
-    log.innerHTML = '<li>Errore log.</li>';
+    qr.innerHTML = '<p style="color:red;">Errore QR.</p>';
+    segnale.textContent = 'Errore GSM.';
+    sim.textContent = 'Errore lettura modulo.';
+    tacche.innerHTML = '';
+    log.innerHTML = '<li>Errore caricamento log.</li>';
   }
 }
 
