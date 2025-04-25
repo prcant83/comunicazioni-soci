@@ -34,7 +34,7 @@ app.use('/backend', express.static(__dirname));
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
 
-// 📥 Import CSV
+// 📥 Importa CSV
 app.post('/upload', upload.single('file'), (req, res) => {
   const results = [];
   const rubrica = req.body.rubrica || 'Generica';
@@ -93,6 +93,56 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
   }
 });
 
+// 📚 Rubriche
+app.get('/rubriche', (req, res) => {
+  db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
+    if (err) return res.status(500).send('Errore DB');
+    res.json(rows.map(r => r.rubrica));
+  });
+});
+
+app.get('/rubriche/:nome', (req, res) => {
+  db.all("SELECT * FROM soci WHERE rubrica = ?", [req.params.nome], (err, rows) => {
+    if (err) return res.status(500).send('Errore DB');
+    res.json(rows);
+  });
+});
+
+app.delete('/rubriche/:nome', (req, res) => {
+  db.run("DELETE FROM soci WHERE rubrica = ?", [req.params.nome], function (err) {
+    if (err) return res.status(500).send('Errore eliminazione rubrica');
+    res.send(`✅ Rubrica "${req.params.nome}" eliminata`);
+  });
+});
+
+// 👤 Contatti
+app.delete('/rubriche/contatto/:id', (req, res) => {
+  db.run("DELETE FROM soci WHERE id = ?", [req.params.id], function (err) {
+    if (err) return res.status(500).send('Errore eliminazione contatto');
+    res.send('✅ Contatto eliminato');
+  });
+});
+
+app.post('/rubriche/contatto', (req, res) => {
+  const { nome, telefono, email, rubrica } = req.body;
+  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
+    [nome, telefono, email, rubrica],
+    function (err) {
+      if (err) return res.status(500).send('Errore inserimento');
+      res.send(`Contatto ${nome} aggiunto`);
+    });
+});
+
+app.put('/rubriche/contatto/:id', (req, res) => {
+  const { nome, telefono, email } = req.body;
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, telefono, email, req.params.id],
+    function (err) {
+      if (err) return res.status(500).send('Errore aggiornamento');
+      res.send('Contatto aggiornato');
+    });
+});
+
 // 📜 Log
 app.get('/api/log', (req, res) => {
   const tipo = req.query.tipo;
@@ -144,7 +194,39 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   });
 });
 
-// 📟 Stato QR WhatsApp
+// 📱 SMS
+app.post('/send-sms', async (req, res) => {
+  const { rubrica, messaggio, numero } = req.body;
+
+  const invia = async (numeroDest) => {
+    try {
+      await sendSMS(numeroDest, messaggio);
+      salvaLogInvio('sms', numeroDest, messaggio, rubrica || null, '');
+    } catch (err) {
+      console.error(`❌ Errore invio SMS a ${numeroDest}:`, err.message);
+      salvaLogInvio('sms', numeroDest, `ERRORE: ${err.message}`, rubrica || null);
+    }
+  };
+
+  if (numero) {
+    await invia(numero);
+    return res.send('✅ SMS inviato al numero specificato');
+  }
+
+  if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
+
+  db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
+    if (err) return res.status(500).send('Errore DB');
+    if (!rows.length) return res.status(404).send('Rubrica vuota');
+    for (const row of rows) {
+      await invia(row.telefono);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    res.send('✅ Messaggi SMS inviati con successo');
+  });
+});
+
+// 📟 Stato WhatsApp
 app.get('/api/stato/whatsapp-qr', (req, res) => {
   const qrPath = path.join(__dirname, '../session/Default/qrcode.png');
   const qrCode = fs.existsSync(qrPath) ? fs.readFileSync(qrPath, { encoding: 'base64' }) : null;
