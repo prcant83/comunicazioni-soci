@@ -34,6 +34,10 @@ sudo apt install -y sqlite3 gammu gammu-smsd chromium
 # Installa dipendenze Node.js
 npm install
 
+# Installa modulo QR Code per salvataggio immagini
+npm install qrcode
+
+
 # File .env
 if [ ! -f ".env" ]; then
 cat <<EOL > .env
