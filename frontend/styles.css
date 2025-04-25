@@ -21,6 +21,11 @@ h1 {
   margin-bottom: 30px;
 }
 
+h2 {
+  color: #333;
+  margin-top: 20px;
+}
+
 .button-grid {
   display: flex;
   justify-content: center;
@@ -42,7 +47,6 @@ h1 {
   background-color: #0056b3;
 }
 
-/* Pulsanti WhatsApp */
 button {
   background-color: #25D366;
   border: none;
@@ -57,7 +61,6 @@ button:hover {
   background-color: #1ebe5d;
 }
 
-/* Input e textarea */
 input[type="text"],
 input[type="email"],
 select,
@@ -72,7 +75,6 @@ textarea {
   box-sizing: border-box;
 }
 
-/* Progress Bar */
 .progress-bar {
   width: 100%;
   background-color: #f0f0f0;
@@ -91,7 +93,6 @@ textarea {
   transition: width 0.3s;
 }
 
-/* Link Torna alla Home */
 .back-link {
   display: inline-block;
   margin-top: 20px;
@@ -102,8 +103,30 @@ textarea {
   text-decoration: underline;
 }
 
-/* Esito finale */
 .status {
   font-weight: bold;
   margin-top: 20px;
+}
+
+/* Stato Modulo SIM */
+#moduloSIM {
+  font-size: 15px;
+  margin: 15px 0;
+  color: #555;
+}
+
+/* Tacche segnale GSM */
+#taccheSegnale {
+  margin-top: 10px;
+}
+.tacca {
+  display: inline-block;
+  width: 10px;
+  height: 20px;
+  background: #ccc;
+  margin-right: 4px;
+  border-radius: 2px;
+}
+.tacca.attiva {
+  background: #25D366;
 }
