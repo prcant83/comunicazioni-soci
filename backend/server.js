@@ -29,6 +29,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
 app.use('/allegati/email', express.static(path.join(__dirname, '../allegati/email')));
 app.use('/allegati/whatsapp', express.static(path.join(__dirname, '../allegati/whatsapp')));
+app.use('/backend', express.static(path.join(__dirname, './')));
+
 
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
