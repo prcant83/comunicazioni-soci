@@ -1,5 +1,3 @@
-// backend/stato.js
-
 async function aggiornaStato() {
   const qr = document.getElementById('qr');
   const segnale = document.getElementById('segnale');
@@ -16,7 +14,7 @@ async function aggiornaStato() {
     // Segnale GSM
     const segnaleRes = await fetch('/api/stato/gsm-signal');
     const segnaleJson = await segnaleRes.json();
-    segnale.textContent = segnaleJson.risposta || 'Nessuna risposta';
+    segnale.textContent = segnaleJson.risposta || '❌ Nessuna risposta dal modulo GSM.';
 
     // Log ultimi 10
     const logRes = await fetch('/api/log?limit=10');
@@ -27,7 +25,7 @@ async function aggiornaStato() {
 
   } catch (err) {
     qr.innerHTML = '<p style="color:red;">Errore nel caricamento QR.</p>';
-    segnale.textContent = 'Errore nel caricamento.';
+    segnale.textContent = 'Errore nel caricamento del segnale.';
     log.innerHTML = '<li>Errore caricamento log.</li>';
   }
 }
@@ -36,4 +34,3 @@ document.addEventListener('DOMContentLoaded', () => {
   aggiornaStato();
   setInterval(aggiornaStato, 10000);
 });
-
