@@ -94,19 +94,19 @@ CREATE TABLE IF NOT EXISTS log_invio (
 );
 EOF
 
-# Crea servizio systemd per avvio automatico
 echo "⚙️ Creo servizio systemd per avvio automatico..."
-sudo tee /etc/systemd/system/comunicazioni-soci.service > /dev/null <<EOF
+APP_DIR=$(pwd)
+cat <<EOF | sudo tee /etc/systemd/system/comunicazioni-soci.service > /dev/null
 [Unit]
 Description=Comunicazioni Soci
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /home/pi/comunicazioni-soci/server.js
-WorkingDirectory=/home/pi/comunicazioni-soci
+ExecStart=/usr/bin/npm start
+WorkingDirectory=$APP_DIR
 Restart=always
 Environment=NODE_ENV=production
-User=pi
+User=$USER
 
 [Install]
 WantedBy=multi-user.target
@@ -117,5 +117,6 @@ sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
 sudo systemctl enable comunicazioni-soci.service
 sudo systemctl restart comunicazioni-soci.service
+
 
 echo "✅ Setup completato! Il sistema si avvierà automaticamente ad ogni riavvio."
