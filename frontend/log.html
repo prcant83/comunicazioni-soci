@@ -3,160 +3,182 @@
 <head>
   <meta charset="UTF-8">
   <title>Log Invii</title>
+  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f5f5;
+      background: #f9f9f9;
       padding: 20px;
+      color: #333;
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
+      font-size: 24px;
     }
 
-    #filtroTipo {
-      display: block;
-      margin: 0 auto 20px auto;
-      font-size: 16px;
+    .controls {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .controls select, .controls input {
       padding: 6px 10px;
+      font-size: 14px;
+      margin: 5px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      background-color: #fff;
+      background: #fff;
+      font-size: 14px;
     }
 
     th, td {
-      border: 1px solid #ccc;
       padding: 8px;
-      text-align: left;
+      border: 1px solid #ccc;
       vertical-align: top;
     }
 
     th {
-      background-color: #e9ecef;
+      background-color: #eee;
     }
 
     tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-
-    a {
-      color: #007BFF;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
+      background-color: #f7f7f7;
     }
 
     img.preview {
-      max-width: 100px;
-      max-height: 100px;
-      display: block;
+      max-width: 80px;
+      max-height: 80px;
     }
 
     .back-link {
       display: block;
       text-align: center;
-      margin-top: 20px;
-      text-decoration: none;
+      margin-top: 25px;
       color: #007BFF;
+      text-decoration: none;
     }
 
-    @media (max-width: 600px) {
+    #noLogsMessage {
+      text-align: center;
+      color: #999;
+      margin-top: 15px;
+    }
+
+    .export-button {
+      margin-left: 10px;
+      background: #007BFF;
+      color: #fff;
+      padding: 5px 10px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .export-button:hover {
+      background-color: #0056b3;
+    }
+
+    @media (max-width: 768px) {
       table, thead, tbody, th, td, tr {
-        font-size: 13px;
+        font-size: 12px;
       }
     }
   </style>
 </head>
 <body>
 
-  <h1>📋 Log degli Invii</h1>
+  <h1>📋 Log Invii</h1>
 
-  <select id="filtroTipo">
-    <option value="">Tutti i tipi</option>
-    <option value="email">📧 Email</option>
-    <option value="whatsapp">💬 WhatsApp</option>
-    <option value="sms">📱 SMS</option>
-  </select>
+  <div class="controls">
+    <select id="filtroTipo">
+      <option value="">Tutti i tipi</option>
+      <option value="email">📧 Email</option>
+      <option value="whatsapp">💬 WhatsApp</option>
+      <option value="sms">📱 SMS</option>
+    </select>
+
+    <input type="text" id="filtroData" placeholder="Filtra per data" />
+
+    <button class="export-button" onclick="esportaPDF()">📄 Esporta PDF</button>
+  </div>
 
   <table>
     <thead>
       <tr>
-        <th>🆔 ID</th>
-        <th>📅 Data</th>
-        <th>📤 Tipo</th>
-        <th>📧 Destinatario</th>
-        <th>🗂 Rubrica</th>
-        <th>📝 Messaggio</th>
-        <th>📎 Allegato</th>
+        <th>ID</th>
+        <th>Data</th>
+        <th>Tipo</th>
+        <th>Destinatario</th>
+        <th>Rubrica</th>
+        <th>Messaggio</th>
+        <th>Allegato</th>
       </tr>
     </thead>
     <tbody id="logTableBody"></tbody>
   </table>
 
-  <p id="noLogsMessage" style="text-align:center; display:none; margin-top:10px;">🕵️‍♂️ Nessun log trovato.</p>
+  <p id="noLogsMessage" style="display:none;">🕵️‍♂️ Nessun log trovato.</p>
 
   <a href="index.html" class="back-link">← Torna alla Home</a>
 
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
-    function escapeHTML(str) {
-      if (!str) return '';
-      return str.replace(/[&<>'"]/g, function (char) {
-        const escapeChars = {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          "'": '&#39;',
-          '"': '&quot;'
-        };
-        return escapeChars[char];
-      });
-    }
+    const filtroTipo = document.getElementById('filtroTipo');
+    const filtroData = document.getElementById('filtroData');
+    const tbody = document.getElementById('logTableBody');
+    const noLogsMessage = document.getElementById('noLogsMessage');
 
-    function getQueryParam(param) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(param);
-    }
+    flatpickr("#filtroData", {
+      dateFormat: "Y-m-d",
+      onChange: () => caricaLog()
+    });
 
-    function caricaLog(tipo = '') {
-      const url = tipo ? `/api/log?tipo=${tipo}` : '/api/log';
+    filtroTipo.addEventListener('change', () => caricaLog());
+
+    function caricaLog() {
+      const tipo = filtroTipo.value;
+      const data = filtroData.value;
+      let url = '/api/log';
+      if (tipo || data) {
+        const params = [];
+        if (tipo) params.push(`tipo=${tipo}`);
+        url += '?' + params.join('&');
+      }
+
       fetch(url)
         .then(res => res.json())
         .then(data => {
-          const tbody = document.getElementById('logTableBody');
-          const noLogsMessage = document.getElementById('noLogsMessage');
+          const logs = filtroData.value
+            ? data.filter(log => log.data.startsWith(filtroData.value))
+            : data;
+
           tbody.innerHTML = '';
-          noLogsMessage.style.display = data.length === 0 ? 'block' : 'none';
+          noLogsMessage.style.display = logs.length === 0 ? 'block' : 'none';
 
-          data.forEach(log => {
+          logs.forEach(log => {
             const tr = document.createElement('tr');
-
+            const ext = log.allegato?.split('.').pop().toLowerCase();
             let allegatoHTML = '';
-            if (log.allegato) {
-              const ext = log.allegato.split('.').pop().toLowerCase();
-              if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) {
-                allegatoHTML = `<a href="/${log.allegato}" target="_blank">
-                                  <img src="/${log.allegato}" class="preview" alt="img">
-                                </a>`;
-              } else if (ext === 'pdf') {
-                allegatoHTML = `<a href="/${log.allegato}" target="_blank">📄 PDF</a>`;
-              } else {
-                allegatoHTML = `<a href="/${log.allegato}" target="_blank">📎 Scarica</a>`;
-              }
+            if (ext && ['jpg', 'jpeg', 'png'].includes(ext)) {
+              allegatoHTML = `<a href="/${log.allegato}" target="_blank"><img src="/${log.allegato}" class="preview"></a>`;
+            } else if (ext === 'pdf') {
+              allegatoHTML = `<a href="/${log.allegato}" target="_blank">📄 PDF</a>`;
+            } else if (log.allegato) {
+              allegatoHTML = `<a href="/${log.allegato}" target="_blank">📎 File</a>`;
             }
 
             tr.innerHTML = `
               <td>${log.id}</td>
-              <td>${escapeHTML(log.data)}</td>
-              <td>${escapeHTML(log.tipo)}</td>
-              <td>${escapeHTML(log.destinatario)}</td>
-              <td>${escapeHTML(log.rubrica)}</td>
-              <td>${escapeHTML(log.messaggio)}</td>
+              <td>${log.data}</td>
+              <td>${log.tipo}</td>
+              <td>${log.destinatario}</td>
+              <td>${log.rubrica}</td>
+              <td>${log.messaggio}</td>
               <td>${allegatoHTML}</td>
             `;
             tbody.appendChild(tr);
@@ -164,22 +186,31 @@
         });
     }
 
-    // Cambio filtro
-    document.getElementById('filtroTipo').addEventListener('change', function () {
-      caricaLog(this.value);
-      const tipo = this.value;
-      const newUrl = tipo ? `?tipo=${tipo}` : window.location.pathname;
-      window.history.pushState({}, '', newUrl);
-    });
-
-    // Caricamento iniziale con query string se presente
-    const tipoParam = getQueryParam('tipo');
-    if (tipoParam) {
-      document.getElementById('filtroTipo').value = tipoParam;
-      caricaLog(tipoParam);
-    } else {
-      caricaLog();
+    function esportaPDF() {
+      import('jspdf').then(jsPDF => {
+        const doc = new jsPDF.jsPDF();
+        doc.setFontSize(10);
+        doc.text("Log Invii", 10, 10);
+        let y = 20;
+        const rows = document.querySelectorAll('#logTableBody tr');
+        rows.forEach((tr, i) => {
+          const cols = tr.querySelectorAll('td');
+          let text = '';
+          cols.forEach(td => {
+            text += td.innerText.replace(/\n/g, ' ') + ' | ';
+          });
+          doc.text(text.slice(0, -3), 10, y);
+          y += 8;
+          if (y > 280) {
+            doc.addPage();
+            y = 20;
+          }
+        });
+        doc.save("log-invii.pdf");
+      });
     }
+
+    caricaLog();
   </script>
 </body>
 </html>
