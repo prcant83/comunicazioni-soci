@@ -6,7 +6,7 @@ const sqlite3 = require('sqlite3').verbose();
 const csv = require('csv-parser');
 const { exec } = require('child_process');
 const { sendEmail } = require('./email');
-const { startWhatsApp } = require('./whatsapp');
+const { startWhatsApp, sendWhatsApp, statoWhatsApp } = require('./whatsapp');
 const { sendSMS } = require('./sms');
 const { salvaLogInvio } = require('./utils/log');
 require('dotenv').config();
@@ -30,7 +30,6 @@ app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
 app.use('/allegati/email', express.static(path.join(__dirname, '../allegati/email')));
 app.use('/allegati/whatsapp', express.static(path.join(__dirname, '../allegati/whatsapp')));
 app.use('/backend', express.static(path.join(__dirname, './')));
-
 
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
@@ -176,8 +175,6 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
     percorsoAllegato = `allegati/whatsapp/${nomeUnico}`;
   }
 
-  const { sendWhatsApp } = require('./whatsapp');
-
   const invia = async (numero) => {
     try {
       await sendWhatsApp(numero, messaggio, percorsoAllegato ? path.join(__dirname, '../', percorsoAllegato) : null);
@@ -238,23 +235,21 @@ app.post('/send-sms', async (req, res) => {
 });
 
 // 📟 Stato: QR WhatsApp
-const { statoWhatsApp } = require('./whatsapp');
-
 app.get('/api/stato/whatsapp-qr', (req, res) => {
   const qrPath = path.join(__dirname, '../session/Default/qrcode.png');
   const qrBase64 = fs.existsSync(qrPath) ? fs.readFileSync(qrPath, { encoding: 'base64' }) : null;
 
   res.json({
-    pronto: statoWhatsApp.pronto,
+    pronto: statoWhatsApp.pronto || false,
     qrCode: statoWhatsApp.qr ? qrBase64 : null,
     errore: statoWhatsApp.errore || null
   });
 });
 
-// 📶 Stato: Segnale GSM
+// 📶 Stato: Segnale GSM + info dispositivo
 app.get('/api/stato/gsm-signal', (req, res) => {
   exec('gammu --identify', (err, stdout, stderr) => {
-    if (err) return res.json({ risposta: 'Errore: ' + (stderr || err.message) });
+    if (err) return res.json({ risposta: '❌ Errore: ' + (stderr || err.message) });
     return res.json({ risposta: stdout.trim() });
   });
 });
