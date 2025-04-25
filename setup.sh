@@ -34,7 +34,7 @@ sudo apt install -y sqlite3 gammu gammu-smsd chromium
 # Installa dipendenze Node.js
 npm install
 
-# Crea file .env se assente
+# File .env
 if [ ! -f ".env" ]; then
 cat <<EOL > .env
 SMTP_HOST=pro.eu.turbo-smtp.com
@@ -47,12 +47,18 @@ EOL
 echo "🛠️  File .env creato (modifica le credenziali SMTP)"
 fi
 
-# Crea cartelle necessarie
-mkdir -p database
-mkdir -p allegati/email
-mkdir -p allegati/whatsapp
+# Cartelle necessarie
+mkdir -p database allegati/email allegati/whatsapp
 
-# ⚙️ Aggiorna struttura tabella soci rimuovendo "cognome"
+# Configura gammu per SIM800C
+echo "📱 Configuro gammu per SIM800C (ttyUSB0)..."
+sudo tee /etc/gammurc > /dev/null <<EOF
+[gammu]
+port = /dev/ttyUSB0
+connection = at
+EOF
+
+# Aggiorna struttura soci
 echo "📐 Aggiorno struttura tabella soci..."
 sqlite3 ./database/soci.sqlite <<EOF
 PRAGMA foreign_keys=off;
@@ -74,7 +80,7 @@ ALTER TABLE soci_nuova RENAME TO soci;
 PRAGMA foreign_keys=on;
 EOF
 
-# 🗃️ Ricrea tabella log_invio (se non esiste)
+# Ricrea tabella log_invio
 echo "📚 Creo tabella log_invio..."
 sqlite3 ./database/soci.sqlite <<EOF
 CREATE TABLE IF NOT EXISTS log_invio (
@@ -88,4 +94,28 @@ CREATE TABLE IF NOT EXISTS log_invio (
 );
 EOF
 
-echo "✅ Setup completato! Avvia con: npm start"
+# Crea servizio systemd per avvio automatico
+echo "⚙️ Creo servizio systemd per avvio automatico..."
+sudo tee /etc/systemd/system/comunicazioni-soci.service > /dev/null <<EOF
+[Unit]
+Description=Comunicazioni Soci
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /home/pi/comunicazioni-soci/server.js
+WorkingDirectory=/home/pi/comunicazioni-soci
+Restart=always
+Environment=NODE_ENV=production
+User=pi
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Abilita servizio all'avvio
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable comunicazioni-soci.service
+sudo systemctl restart comunicazioni-soci.service
+
+echo "✅ Setup completato! Il sistema si avvierà automaticamente ad ogni riavvio."
