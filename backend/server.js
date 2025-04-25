@@ -244,7 +244,7 @@ app.get('/api/stato/whatsapp-qr', (req, res) => {
 
   res.json({
     pronto: statoWhatsApp.pronto || false,
-    qrCode: statoWhatsApp.qr ? qrCode : null,
+    qrCode: qrCode,
     errore: statoWhatsApp.errore || null
   });
 });
