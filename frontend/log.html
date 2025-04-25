@@ -3,214 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <title>Log Invii</title>
-  <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f9f9f9;
       padding: 20px;
-      color: #333;
     }
-
     h1 {
       text-align: center;
       margin-bottom: 20px;
-      font-size: 24px;
     }
-
-    .controls {
-      text-align: center;
-      margin-bottom: 15px;
+    .filtri {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
     }
-
-    .controls select, .controls input {
-      padding: 6px 10px;
+    .filtri input, .filtri select {
+      padding: 5px 10px;
       font-size: 14px;
-      margin: 5px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
-      background: #fff;
+      background: white;
       font-size: 14px;
     }
-
     th, td {
       padding: 8px;
       border: 1px solid #ccc;
+      text-align: left;
       vertical-align: top;
     }
-
     th {
-      background-color: #eee;
+      background: #ececec;
     }
-
     tr:nth-child(even) {
-      background-color: #f7f7f7;
+      background: #f7f7f7;
     }
-
-    img.preview {
-      max-width: 80px;
-      max-height: 80px;
-    }
-
-    .back-link {
-      display: block;
+    .calendar {
+      max-width: 300px;
+      margin: 20px auto;
       text-align: center;
-      margin-top: 25px;
-      color: #007BFF;
-      text-decoration: none;
     }
-
-    #noLogsMessage {
-      text-align: center;
-      color: #999;
-      margin-top: 15px;
-    }
-
-    .export-button {
-      margin-left: 10px;
-      background: #007BFF;
-      color: #fff;
-      padding: 5px 10px;
-      border: none;
+    .calendar td {
+      padding: 5px;
       cursor: pointer;
     }
-
-    .export-button:hover {
-      background-color: #0056b3;
+    .calendar .has-log {
+      font-weight: bold;
+      color: green;
     }
-
-    @media (max-width: 768px) {
-      table, thead, tbody, th, td, tr {
-        font-size: 12px;
-      }
+    .btn-export {
+      margin-top: 15px;
+      display: block;
+      padding: 10px;
+      background: #25D366;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .checkboxes {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .checkboxes label {
+      margin: 0 10px;
     }
   </style>
 </head>
 <body>
 
-  <h1>📋 Log Invii</h1>
+  <h1>📋 Log Invii Soci</h1>
 
-  <div class="controls">
+  <div class="filtri">
     <select id="filtroTipo">
       <option value="">Tutti i tipi</option>
       <option value="email">📧 Email</option>
       <option value="whatsapp">💬 WhatsApp</option>
       <option value="sms">📱 SMS</option>
     </select>
-
-    <input type="text" id="filtroData" placeholder="Filtra per data" />
-
-    <button class="export-button" onclick="esportaPDF()">📄 Esporta PDF</button>
+    <input type="date" id="dataInizio">
+    <input type="date" id="dataFine">
+    <button onclick="caricaLog()">🔍 Filtra</button>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Data</th>
-        <th>Tipo</th>
-        <th>Destinatario</th>
-        <th>Rubrica</th>
-        <th>Messaggio</th>
-        <th>Allegato</th>
+        <th>🆔 ID</th>
+        <th>📅 Data</th>
+        <th>📤 Tipo</th>
+        <th>📧 Destinatario</th>
+        <th>🗂 Rubrica</th>
+        <th>📝 Messaggio</th>
+        <th>📎 Allegato</th>
       </tr>
     </thead>
     <tbody id="logTableBody"></tbody>
   </table>
 
-  <p id="noLogsMessage" style="display:none;">🕵️‍♂️ Nessun log trovato.</p>
+  <p id="noLogsMessage" style="text-align:center; display:none;">🕵️‍♂️ Nessun log trovato.</p>
 
-  <a href="index.html" class="back-link">← Torna alla Home</a>
+  <div class="checkboxes">
+    <label><input type="checkbox" id="includeLogo" checked> Logo in PDF</label>
+    <label><input type="checkbox" id="includeFooter" checked> Footer in PDF</label>
+  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <a class="btn-export" onclick="generaPDF()">📄 Esporta Log in PDF</a>
+
+  <a href="index.html" class="back-link" style="display:block; text-align:center; margin-top:20px;">← Torna alla Home</a>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
-    const filtroTipo = document.getElementById('filtroTipo');
-    const filtroData = document.getElementById('filtroData');
-    const tbody = document.getElementById('logTableBody');
-    const noLogsMessage = document.getElementById('noLogsMessage');
+    async function caricaLog() {
+      const tipo = document.getElementById('filtroTipo').value;
+      const dataInizio = document.getElementById('dataInizio').value;
+      const dataFine = document.getElementById('dataFine').value;
 
-    flatpickr("#filtroData", {
-      dateFormat: "Y-m-d",
-      onChange: () => caricaLog()
-    });
+      let url = '/api/log?';
+      if (tipo) url += `tipo=${tipo}&`;
+      if (dataInizio) url += `start=${dataInizio}&`;
+      if (dataFine) url += `end=${dataFine}&`;
 
-    filtroTipo.addEventListener('change', () => caricaLog());
+      const res = await fetch(url);
+      const data = await res.json();
 
-    function caricaLog() {
-      const tipo = filtroTipo.value;
-      const data = filtroData.value;
-      let url = '/api/log';
-      if (tipo || data) {
-        const params = [];
-        if (tipo) params.push(`tipo=${tipo}`);
-        url += '?' + params.join('&');
-      }
+      const tbody = document.getElementById('logTableBody');
+      tbody.innerHTML = '';
+      document.getElementById('noLogsMessage').style.display = data.length === 0 ? 'block' : 'none';
 
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          const logs = filtroData.value
-            ? data.filter(log => log.data.startsWith(filtroData.value))
-            : data;
-
-          tbody.innerHTML = '';
-          noLogsMessage.style.display = logs.length === 0 ? 'block' : 'none';
-
-          logs.forEach(log => {
-            const tr = document.createElement('tr');
-            const ext = log.allegato?.split('.').pop().toLowerCase();
-            let allegatoHTML = '';
-            if (ext && ['jpg', 'jpeg', 'png'].includes(ext)) {
-              allegatoHTML = `<a href="/${log.allegato}" target="_blank"><img src="/${log.allegato}" class="preview"></a>`;
-            } else if (ext === 'pdf') {
-              allegatoHTML = `<a href="/${log.allegato}" target="_blank">📄 PDF</a>`;
-            } else if (log.allegato) {
-              allegatoHTML = `<a href="/${log.allegato}" target="_blank">📎 File</a>`;
-            }
-
-            tr.innerHTML = `
-              <td>${log.id}</td>
-              <td>${log.data}</td>
-              <td>${log.tipo}</td>
-              <td>${log.destinatario}</td>
-              <td>${log.rubrica}</td>
-              <td>${log.messaggio}</td>
-              <td>${allegatoHTML}</td>
-            `;
-            tbody.appendChild(tr);
-          });
-        });
-    }
-
-    function esportaPDF() {
-      import('jspdf').then(jsPDF => {
-        const doc = new jsPDF.jsPDF();
-        doc.setFontSize(10);
-        doc.text("Log Invii", 10, 10);
-        let y = 20;
-        const rows = document.querySelectorAll('#logTableBody tr');
-        rows.forEach((tr, i) => {
-          const cols = tr.querySelectorAll('td');
-          let text = '';
-          cols.forEach(td => {
-            text += td.innerText.replace(/\n/g, ' ') + ' | ';
-          });
-          doc.text(text.slice(0, -3), 10, y);
-          y += 8;
-          if (y > 280) {
-            doc.addPage();
-            y = 20;
-          }
-        });
-        doc.save("log-invii.pdf");
+      data.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${log.id}</td>
+          <td>${log.data}</td>
+          <td>${log.tipo}</td>
+          <td>${log.destinatario}</td>
+          <td>${log.rubrica}</td>
+          <td>${log.messaggio}</td>
+          <td>${log.allegato ? `<a href="/${log.allegato}" target="_blank">📎 Allegato</a>` : ''}</td>
+        `;
+        tbody.appendChild(tr);
       });
     }
 
-    caricaLog();
+    async function generaPDF() {
+      const includeLogo = document.getElementById('includeLogo').checked;
+      const includeFooter = document.getElementById('includeFooter').checked;
+
+      const element = document.createElement('div');
+
+      if (includeLogo) {
+        const imgLogo = document.createElement('img');
+        imgLogo.src = 'images/logo.png';
+        imgLogo.style.width = '150px';
+        element.appendChild(imgLogo);
+      }
+
+      const table = document.querySelector('table').cloneNode(true);
+      element.appendChild(table);
+
+      if (includeFooter) {
+        const imgFooter = document.createElement('img');
+        imgFooter.src = 'images/footer.png';
+        imgFooter.style.width = '100%';
+        imgFooter.style.marginTop = '10px';
+        element.appendChild(imgFooter);
+      }
+
+      html2pdf().from(element).set({
+        margin: 10,
+        filename: `log_invii_${new Date().toISOString().slice(0,10)}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).save();
+    }
+
+    window.onload = () => {
+      caricaLog();
+    };
   </script>
+
 </body>
 </html>
