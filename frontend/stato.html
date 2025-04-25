@@ -10,11 +10,25 @@
   <main class="container">
     <h1 class="title">📊 Stato del Sistema</h1>
 
-    <div id="qr" style="margin-bottom: 20px;"></div>
-    <div id="segnale">📶 Segnale GSM: ...</div>
+    <section>
+      <h2>📱 WhatsApp</h2>
+      <div id="qr" style="margin-bottom: 20px;"></div>
+    </section>
 
-    <h2 style="margin-top: 25px;">📋 Ultimi Log</h2>
-    <ul id="log"></ul>
+    <section>
+      <h2>📟 Modulo GSM</h2>
+      <div id="modem">🔄 Lettura in corso...</div>
+      <div id="segnale" style="margin-top: 10px;">📶 Segnale: ...</div>
+    </section>
+
+    <section>
+      <h2 style="margin-top: 25px;">📋 Ultimi Log</h2>
+      <ul id="log"></ul>
+    </section>
+
+    <div style="margin-top: 20px;">
+      <a href="index.html">← Torna alla Home</a>
+    </div>
   </main>
 
   <script src="../backend/stato.js"></script>
