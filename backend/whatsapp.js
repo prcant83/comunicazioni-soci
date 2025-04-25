@@ -3,6 +3,12 @@ const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
 
+let statoWhatsApp = {
+  pronto: false,
+  qr: null,
+  errore: null
+};
+
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
@@ -12,14 +18,23 @@ const client = new Client({
   }
 });
 
-// Avvia il client WhatsApp
 function startWhatsApp() {
   client.on('qr', (qr) => {
+    statoWhatsApp.qr = qr;
+    statoWhatsApp.pronto = false;
+    statoWhatsApp.errore = null;
     console.log('🔐 Scansiona il QR Code per accedere a WhatsApp');
     qrcode.generate(qr, { small: true });
+
+    // Salva QR come immagine
+    const QRCode = require('qrcode');
+    QRCode.toFile(path.join(__dirname, '../session/Default/qrcode.png'), qr);
   });
 
   client.on('ready', () => {
+    statoWhatsApp.pronto = true;
+    statoWhatsApp.qr = null;
+    statoWhatsApp.errore = null;
     console.log('✅ WhatsApp client connesso e pronto');
   });
 
@@ -28,15 +43,23 @@ function startWhatsApp() {
   });
 
   client.on('auth_failure', (msg) => {
+    statoWhatsApp.pronto = false;
+    statoWhatsApp.qr = null;
+    statoWhatsApp.errore = 'Autenticazione fallita';
     console.error('❌ Errore autenticazione:', msg);
+  });
+
+  client.on('disconnected', (reason) => {
+    statoWhatsApp.pronto = false;
+    statoWhatsApp.errore = 'Disconnesso: ' + reason;
+    console.warn('⚠️ WhatsApp disconnesso:', reason);
   });
 
   client.initialize();
 }
 
-// Invia messaggio WhatsApp, con o senza allegato
 async function sendWhatsApp(to, messaggio, allegatoPath = null) {
-  if (!client || !client.info || !client.info.wid) {
+  if (!statoWhatsApp.pronto) {
     throw new Error('Client WhatsApp non pronto.');
   }
 
@@ -57,7 +80,6 @@ async function sendWhatsApp(to, messaggio, allegatoPath = null) {
   console.log(`📨 Messaggio WhatsApp inviato a ${to}`);
 }
 
-// Deduci il tipo MIME da estensione file
 function getMimeType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {
@@ -69,4 +91,8 @@ function getMimeType(filePath) {
   }
 }
 
-module.exports = { startWhatsApp, sendWhatsApp };
+module.exports = {
+  startWhatsApp,
+  sendWhatsApp,
+  statoWhatsApp
+};
