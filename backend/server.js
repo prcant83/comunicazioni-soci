@@ -6,7 +6,7 @@ const sqlite3 = require('sqlite3').verbose();
 const csv = require('csv-parser');
 const { exec } = require('child_process');
 const { sendEmail } = require('./email');
-const { startWhatsApp, statoWhatsApp } = require('./whatsapp');
+const { startWhatsApp, sendWhatsApp, statoWhatsApp } = require('./whatsapp');
 const { sendSMS } = require('./sms');
 const { salvaLogInvio } = require('./utils/log');
 require('dotenv').config();
@@ -14,7 +14,7 @@ require('dotenv').config();
 const app = express();
 const PORT = 3000;
 
-// Avvia WhatsApp
+// Avvio WhatsApp
 startWhatsApp();
 
 // Database
@@ -34,7 +34,9 @@ app.use('/backend', express.static(__dirname));
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
 
-// 📥 Importa CSV
+/* ===============================
+   📥 IMPORTA CONTATTI CSV
+================================ */
 app.post('/upload', upload.single('file'), (req, res) => {
   const results = [];
   const rubrica = req.body.rubrica || 'Generica';
@@ -59,7 +61,9 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// 📧 Invia Email
+/* ===============================
+   📧 INVIA EMAIL
+================================ */
 app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const { to, subject, message, rubrica } = req.body;
   const fileTempPath = req.file ? req.file.path : null;
@@ -67,8 +71,8 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
 
   const invia = async (dest) => {
     try {
-      const percorsoAllegatoSalvato = await sendEmail(dest, subject, message, fileTempPath, originalName);
-      salvaLogInvio('email', dest, message, rubrica || null, percorsoAllegatoSalvato || '');
+      const allegato = await sendEmail(dest, subject, message, fileTempPath, originalName);
+      salvaLogInvio('email', dest, message, rubrica || null, allegato || '');
     } catch (err) {
       console.error(`❌ Errore invio email a ${dest}:`, err.message);
       salvaLogInvio('email', dest, `ERRORE: ${err.message}`, rubrica || null);
@@ -81,7 +85,7 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
       if (!rows.length) return res.status(404).send('Rubrica vuota');
       for (const row of rows) {
         await invia(row.email);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(r => setTimeout(r, 2000));
       }
       res.send('✅ Email inviate a tutti i contatti della rubrica');
     });
@@ -93,7 +97,9 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
   }
 });
 
-// 📚 Gestione Rubriche
+/* ===============================
+   📚 RUBRICHE E CONTATTI
+================================ */
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
@@ -115,7 +121,6 @@ app.delete('/rubriche/:nome', (req, res) => {
   });
 });
 
-// 👤 Gestione Contatti
 app.delete('/rubriche/contatto/:id', (req, res) => {
   db.run("DELETE FROM soci WHERE id = ?", [req.params.id], function (err) {
     if (err) return res.status(500).send('Errore eliminazione contatto');
@@ -125,21 +130,25 @@ app.delete('/rubriche/contatto/:id', (req, res) => {
 
 app.post('/rubriche/contatto', (req, res) => {
   const { nome, telefono, email, rubrica } = req.body;
-  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)", [nome, telefono, email, rubrica], function (err) {
-    if (err) return res.status(500).send('Errore inserimento');
-    res.send(`Contatto ${nome} aggiunto`);
-  });
+  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)", [nome, telefono, email, rubrica],
+    function (err) {
+      if (err) return res.status(500).send('Errore inserimento');
+      res.send(`Contatto ${nome} aggiunto`);
+    });
 });
 
 app.put('/rubriche/contatto/:id', (req, res) => {
   const { nome, telefono, email } = req.body;
-  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?", [nome, telefono, email, req.params.id], function (err) {
-    if (err) return res.status(500).send('Errore aggiornamento');
-    res.send('Contatto aggiornato');
-  });
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?", [nome, telefono, email, req.params.id],
+    function (err) {
+      if (err) return res.status(500).send('Errore aggiornamento');
+      res.send('Contatto aggiornato');
+    });
 });
 
-// 📜 Recupera Log
+/* ===============================
+   📜 LOG
+================================ */
 app.get('/api/log', (req, res) => {
   const tipo = req.query.tipo;
   const limit = parseInt(req.query.limit) || 100;
@@ -154,7 +163,9 @@ app.get('/api/log', (req, res) => {
   });
 });
 
-// 💬 Invia WhatsApp
+/* ===============================
+   💬 INVIA WHATSAPP
+================================ */
 app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   const { rubrica, messaggio } = req.body;
   let percorsoAllegato = '';
@@ -166,8 +177,6 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
     fs.renameSync(req.file.path, destinazione);
     percorsoAllegato = `allegati/whatsapp/${nomeUnico}`;
   }
-
-  const { sendWhatsApp } = require('./whatsapp');
 
   const invia = async (numero) => {
     try {
@@ -192,7 +201,9 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   });
 });
 
-// 📱 Invia SMS
+/* ===============================
+   📱 INVIA SMS
+================================ */
 app.post('/send-sms', async (req, res) => {
   const { rubrica, messaggio, numero } = req.body;
 
@@ -224,26 +235,31 @@ app.post('/send-sms', async (req, res) => {
   });
 });
 
-// 📟 Stato: WhatsApp QR Code e Stato
+/* ===============================
+   📟 STATO WHATSAPP
+================================ */
 app.get('/api/stato/whatsapp-qr', (req, res) => {
   const qrPath = path.join(__dirname, '../session/Default/qrcode.png');
   const qrCode = fs.existsSync(qrPath) ? fs.readFileSync(qrPath, { encoding: 'base64' }) : null;
+
   res.json({
-    pronto: statoWhatsApp.pronto,
-    qrCode: qrCode,
+    pronto: statoWhatsApp.pronto || false,
+    qrCode: statoWhatsApp.qr ? qrCode : null,
     errore: statoWhatsApp.errore || null
   });
 });
 
-// 📶 Stato: Segnale GSM
+/* ===============================
+   📶 STATO GSM CON GAMMU
+================================ */
 app.get('/api/stato/gsm-signal', (req, res) => {
   exec('gammu --identify', (err, stdout, stderr) => {
     if (err) return res.json({ risposta: 'Errore: ' + (stderr || err.message) });
-    return res.json({ risposta: stdout.trim() });
+    res.json({ risposta: stdout.trim() });
   });
 });
 
-// ▶️ Avvia il server
+// ▶️ Avvia Server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
