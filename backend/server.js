@@ -239,14 +239,18 @@ app.post('/send-sms', async (req, res) => {
 
 // 📟 Stato: QR WhatsApp
 app.get('/api/stato/whatsapp-qr', (req, res) => {
-  const qrPath = path.join(__dirname, '../session/Default/qrcode.png');
-  if (fs.existsSync(qrPath)) {
-    const qrBase64 = fs.readFileSync(qrPath, { encoding: 'base64' });
-    return res.json({ qrCode: qrBase64 });
-  } else {
-    return res.json({ qrCode: null });
-  }
+  const { statoWhatsApp } = require('./whatsapp');
+
+app.get('/api/stato/whatsapp-qr', (req, res) => {
+  res.json({
+    pronto: statoWhatsApp.pronto,
+    qrCode: statoWhatsApp.qr ? fs.existsSync(path.join(__dirname, '../session/Default/qrcode.png'))
+      ? fs.readFileSync(path.join(__dirname, '../session/Default/qrcode.png'), { encoding: 'base64' })
+      : null : null,
+    errore: statoWhatsApp.errore
+  });
 });
+  });
 
 // 📶 Stato: Segnale GSM
 app.get('/api/stato/gsm-signal', (req, res) => {
