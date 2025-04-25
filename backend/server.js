@@ -14,10 +14,10 @@ require('dotenv').config();
 const app = express();
 const PORT = 3000;
 
-// Avvio WhatsApp
+// Avvia WhatsApp
 startWhatsApp();
 
-// Database
+// DB
 const db = new sqlite3.Database('./database/soci.sqlite', (err) => {
   if (err) console.error('❌ Errore connessione DB:', err.message);
   else console.log('✅ Database SQLite collegato.');
@@ -34,9 +34,7 @@ app.use('/backend', express.static(__dirname));
 // Multer configurazione
 const upload = multer({ dest: 'tmp/' });
 
-/* ===============================
-   📥 IMPORTA CONTATTI CSV
-================================ */
+// 📥 Import CSV
 app.post('/upload', upload.single('file'), (req, res) => {
   const results = [];
   const rubrica = req.body.rubrica || 'Generica';
@@ -61,9 +59,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-/* ===============================
-   📧 INVIA EMAIL
-================================ */
+// 📧 Invia Email
 app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const { to, subject, message, rubrica } = req.body;
   const fileTempPath = req.file ? req.file.path : null;
@@ -71,8 +67,8 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
 
   const invia = async (dest) => {
     try {
-      const allegato = await sendEmail(dest, subject, message, fileTempPath, originalName);
-      salvaLogInvio('email', dest, message, rubrica || null, allegato || '');
+      const percorsoAllegatoSalvato = await sendEmail(dest, subject, message, fileTempPath, originalName);
+      salvaLogInvio('email', dest, message, rubrica || null, percorsoAllegatoSalvato || '');
     } catch (err) {
       console.error(`❌ Errore invio email a ${dest}:`, err.message);
       salvaLogInvio('email', dest, `ERRORE: ${err.message}`, rubrica || null);
@@ -85,7 +81,7 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
       if (!rows.length) return res.status(404).send('Rubrica vuota');
       for (const row of rows) {
         await invia(row.email);
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
       res.send('✅ Email inviate a tutti i contatti della rubrica');
     });
@@ -97,58 +93,7 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
   }
 });
 
-/* ===============================
-   📚 RUBRICHE E CONTATTI
-================================ */
-app.get('/rubriche', (req, res) => {
-  db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
-    if (err) return res.status(500).send('Errore DB');
-    res.json(rows.map(r => r.rubrica));
-  });
-});
-
-app.get('/rubriche/:nome', (req, res) => {
-  db.all("SELECT * FROM soci WHERE rubrica = ?", [req.params.nome], (err, rows) => {
-    if (err) return res.status(500).send('Errore DB');
-    res.json(rows);
-  });
-});
-
-app.delete('/rubriche/:nome', (req, res) => {
-  db.run("DELETE FROM soci WHERE rubrica = ?", [req.params.nome], function (err) {
-    if (err) return res.status(500).send('Errore eliminazione rubrica');
-    res.send(`✅ Rubrica "${req.params.nome}" eliminata`);
-  });
-});
-
-app.delete('/rubriche/contatto/:id', (req, res) => {
-  db.run("DELETE FROM soci WHERE id = ?", [req.params.id], function (err) {
-    if (err) return res.status(500).send('Errore eliminazione contatto');
-    res.send('✅ Contatto eliminato');
-  });
-});
-
-app.post('/rubriche/contatto', (req, res) => {
-  const { nome, telefono, email, rubrica } = req.body;
-  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)", [nome, telefono, email, rubrica],
-    function (err) {
-      if (err) return res.status(500).send('Errore inserimento');
-      res.send(`Contatto ${nome} aggiunto`);
-    });
-});
-
-app.put('/rubriche/contatto/:id', (req, res) => {
-  const { nome, telefono, email } = req.body;
-  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?", [nome, telefono, email, req.params.id],
-    function (err) {
-      if (err) return res.status(500).send('Errore aggiornamento');
-      res.send('Contatto aggiornato');
-    });
-});
-
-/* ===============================
-   📜 LOG
-================================ */
+// 📜 Log
 app.get('/api/log', (req, res) => {
   const tipo = req.query.tipo;
   const limit = parseInt(req.query.limit) || 100;
@@ -163,9 +108,7 @@ app.get('/api/log', (req, res) => {
   });
 });
 
-/* ===============================
-   💬 INVIA WHATSAPP
-================================ */
+// 💬 WhatsApp
 app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   const { rubrica, messaggio } = req.body;
   let percorsoAllegato = '';
@@ -201,65 +144,26 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   });
 });
 
-/* ===============================
-   📱 INVIA SMS
-================================ */
-app.post('/send-sms', async (req, res) => {
-  const { rubrica, messaggio, numero } = req.body;
-
-  const invia = async (numeroDest) => {
-    try {
-      await sendSMS(numeroDest, messaggio);
-      salvaLogInvio('sms', numeroDest, messaggio, rubrica || null, '');
-    } catch (err) {
-      console.error(`❌ Errore invio SMS a ${numeroDest}:`, err.message);
-      salvaLogInvio('sms', numeroDest, `ERRORE: ${err.message}`, rubrica || null);
-    }
-  };
-
-  if (numero) {
-    await invia(numero);
-    return res.send('✅ SMS inviato al numero specificato');
-  }
-
-  if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
-
-  db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
-    if (err) return res.status(500).send('Errore DB');
-    if (!rows.length) return res.status(404).send('Rubrica vuota');
-    for (const row of rows) {
-      await invia(row.telefono);
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    }
-    res.send('✅ Messaggi SMS inviati con successo');
-  });
-});
-
-/* ===============================
-   📟 STATO WHATSAPP
-================================ */
+// 📟 Stato QR WhatsApp
 app.get('/api/stato/whatsapp-qr', (req, res) => {
   const qrPath = path.join(__dirname, '../session/Default/qrcode.png');
   const qrCode = fs.existsSync(qrPath) ? fs.readFileSync(qrPath, { encoding: 'base64' }) : null;
-
   res.json({
-    pronto: statoWhatsApp.pronto || false,
+    pronto: statoWhatsApp.pronto,
     qrCode: qrCode,
     errore: statoWhatsApp.errore || null
   });
 });
 
-/* ===============================
-   📶 STATO GSM CON GAMMU
-================================ */
+// 📶 Stato GSM
 app.get('/api/stato/gsm-signal', (req, res) => {
   exec('gammu --identify', (err, stdout, stderr) => {
     if (err) return res.json({ risposta: 'Errore: ' + (stderr || err.message) });
-    res.json({ risposta: stdout.trim() });
+    return res.json({ risposta: stdout.trim() });
   });
 });
 
-// ▶️ Avvia Server
+// ▶️ Server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
