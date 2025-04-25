@@ -4,31 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stato Sistema</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../frontend/styles.css">
 </head>
 <body>
   <main class="container">
     <h1 class="title">📊 Stato del Sistema</h1>
 
-    <section>
-      <h2>📱 WhatsApp</h2>
-      <div id="qr" style="margin-bottom: 20px;"></div>
-    </section>
+    <div id="qr" style="margin-bottom: 20px;"></div>
 
-    <section>
-      <h2>📟 Modulo GSM</h2>
-      <div id="modem">🔄 Lettura in corso...</div>
-      <div id="segnale" style="margin-top: 10px;">📶 Segnale: ...</div>
-    </section>
+    <div id="moduloSIM">Verifica modulo SIM...</div>
+    <div id="segnale">📶 Segnale GSM: ...</div>
+    <div id="taccheSegnale"></div>
 
-    <section>
-      <h2 style="margin-top: 25px;">📋 Ultimi Log</h2>
-      <ul id="log"></ul>
-    </section>
+    <h2 style="margin-top: 25px;">📋 Ultimi Log</h2>
+    <ul id="log"></ul>
 
-    <div style="margin-top: 20px;">
-      <a href="index.html">← Torna alla Home</a>
-    </div>
+    <a class="back-link" href="index.html">← Torna alla Home</a>
   </main>
 
   <script src="../backend/stato.js"></script>
