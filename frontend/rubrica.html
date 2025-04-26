@@ -4,110 +4,30 @@
   <meta charset="UTF-8">
   <title>Rubrica Soci</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      margin: 20px;
-      color: #333;
-    }
-
-    h1, h2, h3 {
-      text-align: center;
-      margin-bottom: 15px;
-    }
-
-    form, .form-container {
-      text-align: center;
-      margin: 10px auto;
-      max-width: 800px;
-    }
-
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 20px; color: #333; }
+    h1, h2, h3 { text-align: center; margin-bottom: 15px; }
+    form, .form-container { text-align: center; margin: 10px auto; max-width: 800px; }
     input[type="text"], input[type="file"], input[type="email"], input[type="tel"], button {
-      padding: 6px 10px;
-      font-size: 14px;
-      margin: 5px;
+      padding: 6px 10px; font-size: 14px; margin: 5px;
     }
-
-    .rubrica-lista {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      margin: 20px auto;
-    }
-
-    .rubrica-item {
-      padding: 8px 12px;
-      background-color: #e7f1ff;
-      border: 1px solid #b5d3f3;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .rubrica-item:hover {
-      background-color: #cfe6ff;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px auto;
-      background: #fff;
-      max-width: 1000px;
-      font-size: 14px;
-    }
-
-    th, td {
-      padding: 8px;
-      border: 1px solid #ccc;
-    }
-
-    th {
-      background-color: #f0f0f0;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-
-    .azioni button {
-      margin-right: 5px;
-    }
-
-    .delete-btn {
-      color: red;
-      cursor: pointer;
-      margin-left: 10px;
-    }
-
-    .back-link {
-      text-align: center;
-      display: block;
-      margin-top: 20px;
-      color: #007BFF;
-      text-decoration: none;
-    }
-
-    #filtroContatti {
-      display: block;
-      margin: 10px auto;
-      padding: 8px;
-      width: 90%;
-      max-width: 500px;
-    }
-
-    @media (max-width: 768px) {
-      table, thead, tbody, th, td, tr {
-        font-size: 12px;
-      }
-    }
+    .rubrica-lista { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px auto; }
+    .rubrica-item { padding: 8px 12px; background-color: #e7f1ff; border: 1px solid #b5d3f3; border-radius: 4px; cursor: pointer; }
+    .rubrica-item:hover { background-color: #cfe6ff; }
+    table { width: 100%; border-collapse: collapse; margin: 20px auto; background: #fff; max-width: 1000px; font-size: 14px; }
+    th, td { padding: 8px; border: 1px solid #ccc; }
+    th { background-color: #f0f0f0; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .azioni button { margin-right: 5px; }
+    .delete-btn { color: red; cursor: pointer; margin-left: 10px; }
+    .back-link { text-align: center; display: block; margin-top: 20px; color: #007BFF; text-decoration: none; }
+    #filtroContatti { display: block; margin: 10px auto; padding: 8px; width: 90%; max-width: 500px; }
+    @media (max-width: 768px) { table, thead, tbody, th, td, tr { font-size: 12px; } }
   </style>
 </head>
 <body>
 
   <h1>📇 Rubrica Soci</h1>
 
-  <!-- Importazione CSV -->
   <form id="importForm" enctype="multipart/form-data">
     <input type="text" name="rubrica" placeholder="Nome Rubrica" required>
     <input type="file" name="file" accept=".csv" required>
@@ -137,6 +57,8 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <button id="esportaCsvBtn">📄 Esporta Rubrica in CSV</button>
 
     <div class="form-container">
       <h3>➕ Aggiungi o ✏️ Modifica Contatto</h3>
@@ -194,8 +116,8 @@
           <td>${contatto.nome}</td>
           <td>${contatto.telefono}</td>
           <td>${contatto.email}</td>
-          <td>${contatto.data_creazione ? contatto.data_creazione : '-'}</td>
-          <td>${contatto.data_modifica ? contatto.data_modifica : '-'}</td>
+          <td>${contatto.data_creazione || '-'}</td>
+          <td>${contatto.data_modifica || '-'}</td>
           <td class="azioni">
             <button onclick="modificaContatto(${contatto.id}, \`${contatto.nome}\`, '${contatto.telefono}', '${contatto.email}')">✏️</button>
             <button onclick="eliminaContatto(${contatto.id})">🗑</button>
@@ -278,6 +200,18 @@
         (c.data_modifica && c.data_modifica.toLowerCase().includes(filtro))
       );
       mostraContatti(filtrati);
+    });
+
+    document.getElementById('esportaCsvBtn').addEventListener('click', function() {
+      if (contattiTotali.length === 0) return alert('Nessun contatto da esportare.');
+      const intestazioni = 'Nome,Telefono,Email,Data Creazione,Ultima Modifica\n';
+      const righe = contattiTotali.map(c => `${c.nome},${c.telefono},${c.email},${c.data_creazione || ''},${c.data_modifica || ''}`).join('\n');
+      const csvContent = intestazioni + righe;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `rubrica_${rubricaCorrente}_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
     });
 
     window.onload = caricaRubriche;
