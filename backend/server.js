@@ -125,8 +125,9 @@ app.delete('/rubriche/contatto/:id', (req, res) => {
 
 app.post('/rubriche/contatto', (req, res) => {
   const { nome, telefono, email, rubrica } = req.body;
-  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
-    [nome, telefono, email, rubrica],
+  const data_creazione = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  db.run("INSERT INTO soci (nome, telefono, email, rubrica, data_creazione) VALUES (?, ?, ?, ?, ?)",
+    [nome, telefono, email, rubrica, data_creazione],
     function (err) {
       if (err) return res.status(500).send('Errore inserimento');
       res.send(`Contatto ${nome} aggiunto`);
@@ -135,8 +136,9 @@ app.post('/rubriche/contatto', (req, res) => {
 
 app.put('/rubriche/contatto/:id', (req, res) => {
   const { nome, telefono, email } = req.body;
-  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, telefono, email, req.params.id],
+  const data_modifica = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ?, data_modifica = ? WHERE id = ?",
+    [nome, telefono, email, data_modifica, req.params.id],
     function (err) {
       if (err) return res.status(500).send('Errore aggiornamento');
       res.send('Contatto aggiornato');
