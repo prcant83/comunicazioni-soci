@@ -1,4 +1,4 @@
-// backend/server.js aggiornato
+// backend/server.js aggiornato completo
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
@@ -14,6 +14,7 @@ require('dotenv').config();
 
 const app = express();
 const PORT = 3000;
+const pathProgetto = '/home/riccardo/comunicazioni-soci';
 
 // Avvia WhatsApp
 startWhatsApp();
@@ -155,12 +156,10 @@ app.get('/api/log', (req, res) => {
     conditions.push("tipo = ?");
     params.push(tipo);
   }
-
   if (start) {
     conditions.push("data >= ?");
     params.push(start);
   }
-
   if (end) {
     conditions.push("data <= ?");
     params.push(end);
@@ -268,6 +267,30 @@ app.get('/api/stato/gsm-signal', (req, res) => {
   exec('gammu --identify', (err, stdout, stderr) => {
     if (err) return res.json({ risposta: 'Errore: ' + (stderr || err.message) });
     return res.json({ risposta: stdout.trim() });
+  });
+});
+
+// 🔄 Riavvia Raspberry
+app.post('/api/riavvia', (req, res) => {
+  exec('sudo reboot', (err) => {
+    if (err) return res.status(500).send('Errore riavvio: ' + err.message);
+    res.send('✅ Riavvio in corso...');
+  });
+});
+
+// ⚙️ Aggiorna Sistema (setup completo)
+app.post('/api/aggiorna', (req, res) => {
+  exec(`cd ${pathProgetto} && bash setup.sh`, (err, stdout, stderr) => {
+    if (err) return res.status(500).send('Errore aggiornamento: ' + (stderr || err.message));
+    res.send('✅ Setup completato:\n' + stdout);
+  });
+});
+
+// ❌ Scollega WhatsApp
+app.post('/api/whatsapp-reset', (req, res) => {
+  exec(`rm -rf ${pathProgetto}/session/Default && sudo systemctl restart comunicazioni-soci.service`, (err, stdout, stderr) => {
+    if (err) return res.status(500).send('Errore reset WhatsApp: ' + (stderr || err.message));
+    res.send('✅ WhatsApp scollegato. Scannerizza un nuovo QR Code.');
   });
 });
 
