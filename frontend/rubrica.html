@@ -88,6 +88,14 @@
       text-decoration: none;
     }
 
+    #filtroContatti {
+      display: block;
+      margin: 10px auto;
+      padding: 8px;
+      width: 90%;
+      max-width: 500px;
+    }
+
     @media (max-width: 768px) {
       table, thead, tbody, th, td, tr {
         font-size: 12px;
@@ -114,12 +122,16 @@
       <span class="delete-btn" onclick="eliminaRubricaCorrente()">🗑 Elimina Rubrica</span>
     </h2>
 
+    <input type="text" id="filtroContatti" placeholder="🔎 Cerca contatti...">
+
     <table id="tabellaContatti">
       <thead>
         <tr>
           <th>Nome</th>
           <th>Telefono</th>
           <th>Email</th>
+          <th>Data Creazione</th>
+          <th>Ultima Modifica</th>
           <th>Azioni</th>
         </tr>
       </thead>
@@ -143,6 +155,7 @@
 
   <script>
     let rubricaCorrente = '';
+    let contattiTotali = [];
 
     function caricaRubriche() {
       fetch('/rubriche')
@@ -167,22 +180,29 @@
       fetch(`/rubriche/${encodeURIComponent(rubrica)}`)
         .then(res => res.json())
         .then(data => {
-          const tbody = document.querySelector('#tabellaContatti tbody');
-          tbody.innerHTML = '';
-          data.forEach(contatto => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${contatto.nome}</td>
-              <td>${contatto.telefono}</td>
-              <td>${contatto.email}</td>
-              <td class="azioni">
-                <button onclick="modificaContatto(${contatto.id}, \`${contatto.nome}\`, '${contatto.telefono}', '${contatto.email}')">✏️</button>
-                <button onclick="eliminaContatto(${contatto.id})">🗑</button>
-              </td>
-            `;
-            tbody.appendChild(tr);
-          });
+          contattiTotali = data;
+          mostraContatti(contattiTotali);
         });
+    }
+
+    function mostraContatti(contatti) {
+      const tbody = document.querySelector('#tabellaContatti tbody');
+      tbody.innerHTML = '';
+      contatti.forEach(contatto => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${contatto.nome}</td>
+          <td>${contatto.telefono}</td>
+          <td>${contatto.email}</td>
+          <td>${contatto.data_creazione ? contatto.data_creazione : '-'}</td>
+          <td>${contatto.data_modifica ? contatto.data_modifica : '-'}</td>
+          <td class="azioni">
+            <button onclick="modificaContatto(${contatto.id}, \`${contatto.nome}\`, '${contatto.telefono}', '${contatto.email}')">✏️</button>
+            <button onclick="eliminaContatto(${contatto.id})">🗑</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     function modificaContatto(id, nome, telefono, email) {
@@ -247,6 +267,18 @@
           });
       }
     }
+
+    document.getElementById('filtroContatti').addEventListener('input', function(e) {
+      const filtro = e.target.value.toLowerCase();
+      const filtrati = contattiTotali.filter(c =>
+        (c.nome && c.nome.toLowerCase().includes(filtro)) ||
+        (c.telefono && c.telefono.toLowerCase().includes(filtro)) ||
+        (c.email && c.email.toLowerCase().includes(filtro)) ||
+        (c.data_creazione && c.data_creazione.toLowerCase().includes(filtro)) ||
+        (c.data_modifica && c.data_modifica.toLowerCase().includes(filtro))
+      );
+      mostraContatti(filtrati);
+    });
 
     window.onload = caricaRubriche;
   </script>
