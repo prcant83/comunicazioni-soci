@@ -5,12 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stato Sistema</title>
   <link rel="stylesheet" href="../frontend/styles.css">
+  <style>
+    .azioniSistema {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .azioniSistema button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #007BFF;
+      color: white;
+    }
+    .azioniSistema button:hover {
+      background-color: #0056b3;
+    }
+    #qr img {
+      max-width: 300px;
+      margin: 10px auto;
+      display: block;
+    }
+    #taccheSegnale {
+      margin: 10px 0;
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+    }
+    .tacca {
+      width: 10px;
+      height: 20px;
+      background-color: #ccc;
+      border-radius: 2px;
+    }
+    .tacca.attiva {
+      background-color: #4caf50;
+    }
+  </style>
 </head>
 <body>
   <main class="container">
     <h1 class="title">📊 Stato del Sistema</h1>
 
-    <div id="qr" style="margin-bottom: 20px;"></div>
+    <div class="azioniSistema">
+      <button onclick="riavviaSistema()">🔄 Riavvia Raspberry</button>
+      <button onclick="aggiornaSistema()">⚙️ Aggiorna Sistema</button>
+      <button onclick="resettaWhatsApp()">❌ Scollega WhatsApp</button>
+    </div>
+
+    <div id="qr" style="margin: 20px 0;"></div>
 
     <div id="moduloSIM">Verifica modulo SIM...</div>
     <div id="segnale">📶 Segnale GSM: ...</div>
