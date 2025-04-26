@@ -1,21 +1,42 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Comunicazioni Soci</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comunicazioni Soci - Home</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Comunicazioni Soci</h1>
-    <div class="button-grid">
-      <a href="sms.html" class="btn">📱 SMS</a>
-      <a href="whatsapp.html" class="btn">💬 WhatsApp</a>
-      <a href="email.html" class="btn">📧 Email</a>
-      <a href="rubrica.html" class="btn">📂 Rubrica</a>
-    </div>
-  </div>
-  <script src="scripts/main.js"></script>
+  <main class="container">
+    <h1 class="title">📨 Comunicazioni Soci</h1>
+
+    <section class="form-section" style="text-align: center;">
+      <a href="sms.html" class="btn-home">📱 Invia SMS</a>
+      <a href="whatsapp.html" class="btn-home">💬 Invia WhatsApp</a>
+      <a href="email.html" class="btn-home">📧 Invia Email</a>
+      <a href="rubrica.html" class="btn-home">📇 Gestisci Rubrica</a>
+    </section>
+
+    <a href="stato.html" class="back-link">📊 Stato Sistema</a>
+  </main>
+
+  <style>
+    .btn-home {
+      display: inline-block;
+      margin: 10px;
+      padding: 15px 30px;
+      font-size: 1.2em;
+      background-color: #25D366;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    .btn-home:hover {
+      background-color: #1da851;
+    }
+  </style>
 </body>
 </html>
