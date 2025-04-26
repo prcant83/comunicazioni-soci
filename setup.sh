@@ -37,7 +37,6 @@ npm install
 # Installa modulo QR Code per salvataggio immagini
 npm install qrcode
 
-
 # File .env
 if [ ! -f ".env" ]; then
 cat <<EOL > .env
@@ -62,7 +61,7 @@ port = /dev/ttyUSB0
 connection = at
 EOF
 
-# Aggiorna struttura soci
+# Aggiorna struttura soci con date
 echo "📐 Aggiorno struttura tabella soci..."
 sqlite3 ./database/soci.sqlite <<EOF
 PRAGMA foreign_keys=off;
@@ -72,11 +71,13 @@ CREATE TABLE IF NOT EXISTS soci_nuova (
   nome TEXT,
   telefono TEXT,
   email TEXT,
-  rubrica TEXT
+  rubrica TEXT,
+  data_creazione TEXT DEFAULT (datetime('now')),
+  data_modifica TEXT
 );
 
-INSERT INTO soci_nuova (id, nome, telefono, email, rubrica)
-SELECT id, nome, telefono, email, rubrica FROM soci;
+INSERT INTO soci_nuova (id, nome, telefono, email, rubrica, data_creazione)
+SELECT id, nome, telefono, email, rubrica, datetime('now') FROM soci;
 
 DROP TABLE soci;
 ALTER TABLE soci_nuova RENAME TO soci;
@@ -98,6 +99,7 @@ CREATE TABLE IF NOT EXISTS log_invio (
 );
 EOF
 
+# Creo servizio systemd
 echo "⚙️ Creo servizio systemd per avvio automatico..."
 APP_DIR=$(pwd)
 cat <<EOF | sudo tee /etc/systemd/system/comunicazioni-soci.service > /dev/null
@@ -121,6 +123,5 @@ sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
 sudo systemctl enable comunicazioni-soci.service
 sudo systemctl restart comunicazioni-soci.service
-
 
 echo "✅ Setup completato! Il sistema si avvierà automaticamente ad ogni riavvio."
