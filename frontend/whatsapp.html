@@ -5,32 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Invia WhatsApp</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    .progress-bar {
-      width: 100%;
-      background-color: #f0f0f0;
-      border-radius: 5px;
-      overflow: hidden;
-      margin-top: 15px;
-      display: none;
-    }
-
-    .progress-bar-inner {
-      height: 20px;
-      background-color: #25D366;
-      width: 0%;
-      color: white;
-      text-align: center;
-      line-height: 20px;
-      transition: width 0.3s;
-    }
-  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>📱 Invia Messaggio WhatsApp</h1>
+  <main class="container">
+    <h1 class="title">📱 Invia Messaggio WhatsApp</h1>
 
-    <form id="whatsappForm" enctype="multipart/form-data">
+    <form id="whatsappForm" class="form-section" enctype="multipart/form-data">
       <label for="rubrica">Rubrica:</label>
       <select id="rubrica" name="rubrica" required>
         <option value="">-- Seleziona Rubrica --</option>
@@ -49,9 +29,10 @@
       <div class="progress-bar-inner" id="progressBar">0%</div>
     </div>
 
-    <p id="risultato" class="status" style="margin-top: 15px;"></p>
+    <p id="risultato" class="status"></p>
+
     <a href="index.html" class="back-link">← Torna alla Home</a>
-  </div>
+  </main>
 
   <script>
     async function caricaRubriche() {
