@@ -62,6 +62,33 @@ async function aggiornaStato() {
   }
 }
 
+function riavviaSistema() {
+  if (confirm('Sei sicuro di voler riavviare il Raspberry?')) {
+    fetch('/api/riavvia', { method: 'POST' })
+      .then(res => res.text())
+      .then(alert)
+      .catch(err => alert('Errore: ' + err));
+  }
+}
+
+function aggiornaSistema() {
+  if (confirm('Vuoi procedere con l\'intero setup (aggiornamento completo)?')) {
+    fetch('/api/aggiorna', { method: 'POST' })
+      .then(res => res.text())
+      .then(alert)
+      .catch(err => alert('Errore: ' + err));
+  }
+}
+
+function resettaWhatsApp() {
+  if (confirm('Vuoi scollegare WhatsApp e resettare la sessione? (richiederà una nuova scansione QR)')) {
+    fetch('/api/whatsapp-reset', { method: 'POST' })
+      .then(res => res.text())
+      .then(alert)
+      .catch(err => alert('Errore: ' + err));
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   aggiornaStato();
   setInterval(aggiornaStato, 10000);
