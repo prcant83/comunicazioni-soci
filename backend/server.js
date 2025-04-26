@@ -160,7 +160,7 @@ app.get('/api/log', (req, res) => {
 
 // 💬 WhatsApp
 app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
-  const { rubrica, messaggio } = req.body;
+  const { rubrica, messaggio, telefono } = req.body;
   let percorsoAllegato = '';
 
   if (req.file) {
@@ -181,6 +181,11 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
     }
   };
 
+  if (telefono) {
+    await invia(telefono);
+    return res.send('✅ Messaggio WhatsApp inviato al numero specificato');
+  }
+
   if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
 
   db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
@@ -190,7 +195,7 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
       await invia(row.telefono);
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
-    res.send('✅ Messaggi WhatsApp inviati con successo');
+    res.send('✅ Messaggi WhatsApp inviati a tutta la rubrica');
   });
 });
 
