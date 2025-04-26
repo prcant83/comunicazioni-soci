@@ -1,3 +1,4 @@
+// backend/server.js aggiornato
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
@@ -125,9 +126,8 @@ app.delete('/rubriche/contatto/:id', (req, res) => {
 
 app.post('/rubriche/contatto', (req, res) => {
   const { nome, telefono, email, rubrica } = req.body;
-  const data_creazione = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  db.run("INSERT INTO soci (nome, telefono, email, rubrica, data_creazione) VALUES (?, ?, ?, ?, ?)",
-    [nome, telefono, email, rubrica, data_creazione],
+  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
+    [nome, telefono, email, rubrica],
     function (err) {
       if (err) return res.status(500).send('Errore inserimento');
       res.send(`Contatto ${nome} aggiunto`);
@@ -136,9 +136,8 @@ app.post('/rubriche/contatto', (req, res) => {
 
 app.put('/rubriche/contatto/:id', (req, res) => {
   const { nome, telefono, email } = req.body;
-  const data_modifica = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ?, data_modifica = ? WHERE id = ?",
-    [nome, telefono, email, data_modifica, req.params.id],
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
+    [nome, telefono, email, req.params.id],
     function (err) {
       if (err) return res.status(500).send('Errore aggiornamento');
       res.send('Contatto aggiornato');
@@ -147,12 +146,32 @@ app.put('/rubriche/contatto/:id', (req, res) => {
 
 // 📜 Log
 app.get('/api/log', (req, res) => {
-  const tipo = req.query.tipo;
-  const limit = parseInt(req.query.limit) || 100;
-  const sql = tipo
-    ? "SELECT * FROM log_invio WHERE tipo = ? ORDER BY id DESC LIMIT ?"
-    : "SELECT * FROM log_invio ORDER BY id DESC LIMIT ?";
-  const params = tipo ? [tipo, limit] : [limit];
+  const { tipo, start, end, limit } = req.query;
+  let sql = "SELECT * FROM log_invio";
+  const conditions = [];
+  const params = [];
+
+  if (tipo) {
+    conditions.push("tipo = ?");
+    params.push(tipo);
+  }
+
+  if (start) {
+    conditions.push("data >= ?");
+    params.push(start);
+  }
+
+  if (end) {
+    conditions.push("data <= ?");
+    params.push(end);
+  }
+
+  if (conditions.length) {
+    sql += " WHERE " + conditions.join(" AND ");
+  }
+
+  sql += " ORDER BY id DESC LIMIT ?";
+  params.push(parseInt(limit) || 100);
 
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).send('Errore recupero log');
