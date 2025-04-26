@@ -55,9 +55,11 @@ router.post('/contatto', express.json(), (req, res) => {
     return res.status(400).send('Email non valida');
   }
 
+  const data_creazione = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
   db.run(
-    "INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
-    [nome.trim(), telefono.trim(), email.trim(), rubrica.trim()],
+    "INSERT INTO soci (nome, telefono, email, rubrica, data_creazione) VALUES (?, ?, ?, ?, ?)",
+    [nome.trim(), telefono.trim(), email.trim(), rubrica.trim(), data_creazione],
     function (err) {
       if (err) return res.status(500).send('Errore inserimento contatto');
       res.send(`Contatto "${nome}" aggiunto alla rubrica "${rubrica}".`);
@@ -82,9 +84,11 @@ router.put('/contatto/:id', express.json(), (req, res) => {
     return res.status(400).send('Email non valida');
   }
 
+  const data_modifica = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
   db.run(
-    "UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome.trim(), telefono.trim(), email.trim(), id],
+    "UPDATE soci SET nome = ?, telefono = ?, email = ?, data_modifica = ? WHERE id = ?",
+    [nome.trim(), telefono.trim(), email.trim(), data_modifica, id],
     function (err) {
       if (err) return res.status(500).send('Errore aggiornamento contatto');
       res.send(`Contatto ID ${id} aggiornato.`);
