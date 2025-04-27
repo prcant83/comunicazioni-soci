@@ -269,7 +269,7 @@ app.get('/api/stato/gsm-signal', (req, res) => {
       return res.status(500).json({ error: stderr || error.message });
     }
 
-    const match = stdout.match(/Signal strength\\s*:\\s*(-?\\d+) dBm[\\s\\S]*Network level\\s*:\\s*(\\d+)%/i);
+    const match = stdout.match(/Signal strength\s*:\s*(-?\d+) dBm[\s\S]*Network level\s*:\s*(\d+)%/i);
 
     if (match) {
       const segnale_dBm = parseInt(match[1]);
@@ -280,10 +280,11 @@ app.get('/api/stato/gsm-signal', (req, res) => {
         risposta: `📶 Segnale: ${percentuale}% (${segnale_dBm} dBm)`
       });
     } else {
-      res.status(500).json({ error: \"Impossibile leggere il segnale GSM\" });
+      res.status(500).json({ error: "Impossibile leggere il segnale GSM" });
     }
   });
 });
+
 
 
 
