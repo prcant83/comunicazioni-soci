@@ -371,32 +371,3 @@ app.post('/api/whatsapp-reset', (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
-
-// 🔄 Riavvia Raspberry
-app.post('/api/riavvia', (req, res) => {
-  exec('sudo reboot', (err) => {
-    if (err) return res.status(500).send('Errore riavvio: ' + err.message);
-    res.send('✅ Riavvio in corso...');
-  });
-});
-
-// ⚙️ Aggiorna Sistema
-app.post('/api/aggiorna', (req, res) => {
-  exec(`cd ${pathProgetto} && bash setup.sh`, (err, stdout, stderr) => {
-    if (err) return res.status(500).send('Errore aggiornamento: ' + (stderr || err.message));
-    res.send('✅ Setup completato:\\n' + stdout);
-  });
-});
-
-// ❌ Scollega WhatsApp
-app.post('/api/whatsapp-reset', (req, res) => {
-  exec(`rm -rf ${pathProgetto}/session/Default && sudo systemctl restart comunicazioni-soci.service`, (err, stdout, stderr) => {
-    if (err) return res.status(500).send('Errore reset WhatsApp: ' + (stderr || err.message));
-    res.send('✅ WhatsApp scollegato. Scannerizza un nuovo QR Code.');
-  });
-});
-
-// ▶️ Server
-app.listen(PORT, () => {
-  console.log(`✅ Server avviato su http://localhost:${PORT}`);
-});
