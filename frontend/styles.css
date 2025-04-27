@@ -75,9 +75,9 @@ th, td {
   padding: 0.75em;
   border: 1px solid #ddd;
   text-align: left;
-  word-break: break-word; /* 🔥 forza andare a capo */
-  max-width: 200px;        /* 🔥 limite massimo celle */
-  vertical-align: top;     /* 🔥 allinea in alto */
+  word-break: break-word; /* 🔥 va a capo su contenuti lunghi */
+  max-width: 200px;        /* 🔥 limite celle */
+  vertical-align: top;     /* 🔥 allineamento in alto */
 }
 
 th {
@@ -89,6 +89,7 @@ tr:nth-child(even) {
   background: #f9f9f9;
 }
 
+/* Calendario */
 #calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -123,10 +124,10 @@ tr:nth-child(even) {
 }
 
 .calendar-days {
-  display: contents; /* 🔥 cambia: i giorni si allineano alla griglia principale */
+  display: contents;
 }
 
-.calendar-cell, .calendar-days div {
+.calendar-days div, .calendar-cell {
   background: #eee;
   padding: 10px;
   min-width: 50px;
@@ -147,6 +148,28 @@ tr:nth-child(even) {
 .calendar-cell.empty {
   background: transparent;
   cursor: default;
+}
+
+/* Pulsanti esportazione */
+.btn-group {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-group button {
+  background-color: #4caf50;
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: none;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-group button:hover {
+  background-color: #43a047;
 }
 
 /* Link \"Torna alla Home\" */
