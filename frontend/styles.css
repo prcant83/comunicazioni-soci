@@ -75,9 +75,9 @@ th, td {
   padding: 0.75em;
   border: 1px solid #ddd;
   text-align: left;
-  word-break: break-word; /* 🔥 va a capo su contenuti lunghi */
-  max-width: 200px;        /* 🔥 limite celle */
-  vertical-align: top;     /* 🔥 allineamento in alto */
+  word-break: break-word; /* 🔥 forza andare a capo nelle celle */
+  max-width: 200px;        /* 🔥 limite larghezza massima celle */
+  vertical-align: top;     /* 🔥 testo allineato in alto */
 }
 
 th {
@@ -90,16 +90,12 @@ tr:nth-child(even) {
 }
 
 /* Calendario */
-#calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-  margin: 20px auto;
+.calendar-wrapper {
   max-width: 420px;
-  text-align: center;
+  margin: 20px auto;
 }
 
-.calendar-header {
+.calendar-nav {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -107,9 +103,9 @@ tr:nth-child(even) {
   margin-bottom: 10px;
 }
 
-.calendar-header button {
+.calendar-nav button {
   padding: 5px 10px;
-  font-size: 1em;
+  font-size: 1.1em;
   background: #4caf50;
   color: white;
   border: none;
@@ -117,17 +113,24 @@ tr:nth-child(even) {
   cursor: pointer;
 }
 
-.calendar-header span {
+.calendar-nav button:hover {
+  background-color: #43a047;
+}
+
+.calendar-nav span {
   font-weight: bold;
-  font-size: 1.2em;
+  font-size: 1.4em;
   text-transform: uppercase;
 }
 
-.calendar-days {
-  display: contents;
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  text-align: center;
 }
 
-.calendar-days div, .calendar-cell {
+.calendar-days, .calendar-cell {
   background: #eee;
   padding: 10px;
   min-width: 50px;
@@ -205,5 +208,12 @@ tr:nth-child(even) {
 
   #calendar {
     grid-template-columns: repeat(7, 1fr);
+  }
+
+  .calendar-days, .calendar-cell {
+    padding: 8px;
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 0.8em;
   }
 }
