@@ -29,7 +29,7 @@ else
 fi
 
 # Altri pacchetti richiesti
-sudo apt install -y sqlite3 gammu gammu-smsd chromium
+sudo apt install -y sqlite3 gammu gammu-smsd chromium usb-modeswitch libusb-1.0-0
 
 # Installa dipendenze Node.js
 npm install
