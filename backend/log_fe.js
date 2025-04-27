@@ -73,20 +73,20 @@ function filtraLog() {
 }
 
 function esportaPDF() {
-  import('https://cdn.jsdelivr.net/npm/jspdf').then(jsPDF => {
-    import('https://cdn.jsdelivr.net/npm/jspdf-autotable').then(() => {
-      const doc = new jsPDF.jsPDF();
-      doc.text('Log Invii Soci', 14, 20);
-      doc.autoTable({
-        html: '#logTable',
-        startY: 30,
-        theme: 'striped',
-        styles: { fontSize: 8 }
-      });
-      doc.save(`log_invii_${new Date().toISOString().slice(0,10)}.pdf`);
-    });
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.text('Log Invii Soci', 14, 20);
+  doc.autoTable({
+    html: '#logTable',
+    startY: 30,
+    theme: 'striped',
+    styles: { fontSize: 8 }
   });
+
+  doc.save(`log_invii_${new Date().toISOString().slice(0,10)}.pdf`);
 }
+
 
 function esportaCSV() {
   let csv = 'ID,Data,Tipo,Destinatario,Rubrica,Messaggio,Allegato\n';
