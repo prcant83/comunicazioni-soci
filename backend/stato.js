@@ -17,7 +17,7 @@ async function aggiornaStato() {
       qr.innerHTML = `<p style="color:red;">❌ WhatsApp non connesso</p>`;
     }
 
-    // Stato GSM
+    // Stato GSM aggiornato
     const gsmRes = await fetch('/api/stato/gsm-signal');
     const gsmJson = await gsmRes.json();
 
@@ -45,7 +45,6 @@ async function aggiornaStato() {
       }
 
       sim.textContent = '📟 SIM800C rilevato';
-
     } else {
       segnale.textContent = 'Errore lettura segnale GSM';
       tacche.innerHTML = '';
@@ -97,5 +96,5 @@ function resettaWhatsApp() {
 
 document.addEventListener('DOMContentLoaded', () => {
   aggiornaStato();
-  setInterval(aggiornaStato, 10000); // aggiorna ogni 10 secondi
+  setInterval(aggiornaStato, 10000);
 });
