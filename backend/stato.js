@@ -17,34 +17,40 @@ async function aggiornaStato() {
       qr.innerHTML = `<p style="color:red;">❌ WhatsApp non connesso</p>`;
     }
 
-    // Segnale GSM
-    const segnaleRes = await fetch('/api/stato/gsm-signal');
-    const segnaleJson = await segnaleRes.json();
-    const risposta = segnaleJson.risposta || '';
+    // Segnale GSM (aggiornato)
+    const gsmRes = await fetch('/api/stato/gsm-signal');
+    const gsmJson = await gsmRes.json();
 
-    segnale.textContent = risposta;
+    if (gsmJson.percentuale !== undefined) {
+      segnale.textContent = gsmJson.risposta;
 
-    // Tacche segnale (semplificate)
-    const match = risposta.match(/Signal strength\s*:\s*(\d+)\s*/i);
-    const livello = match ? parseInt(match[1]) : -1;
-    let nTacche = 0;
+      tacche.innerHTML = '';
+      let numTacche = 0;
+      if (gsmJson.percentuale > 80) numTacche = 5;
+      else if (gsmJson.percentuale > 60) numTacche = 4;
+      else if (gsmJson.percentuale > 40) numTacche = 3;
+      else if (gsmJson.percentuale > 20) numTacche = 2;
+      else if (gsmJson.percentuale > 0) numTacche = 1;
 
-    if (livello >= 20) nTacche = 5;
-    else if (livello >= 15) nTacche = 4;
-    else if (livello >= 10) nTacche = 3;
-    else if (livello >= 5) nTacche = 2;
-    else if (livello >= 1) nTacche = 1;
+      for (let i = 1; i <= 5; i++) {
+        const barra = document.createElement('div');
+        barra.className = 'tacca';
+        barra.style.display = 'inline-block';
+        barra.style.width = '15px';
+        barra.style.height = `${i * 5 + 10}px`;
+        barra.style.margin = '0 2px';
+        barra.style.backgroundColor = (i <= numTacche) ? '#25D366' : '#ddd';
+        barra.style.borderRadius = '2px';
+        tacche.appendChild(barra);
+      }
 
-    tacche.innerHTML = '';
-    for (let i = 1; i <= 5; i++) {
-      const div = document.createElement('div');
-      div.classList.add('tacca');
-      if (i <= nTacche) div.classList.add('attiva');
-      tacche.appendChild(div);
+      sim.textContent = '📟 SIM800C rilevato';
+
+    } else {
+      segnale.textContent = 'Errore lettura segnale GSM';
+      tacche.innerHTML = '';
+      sim.textContent = '❌ SIM800C non rilevato';
     }
-
-    // SIM collegata
-    sim.textContent = risposta.includes('/dev/ttyUSB') ? '📟 SIM800C rilevato' : '❌ Nessun dispositivo USB trovato';
 
     // Log ultimi 10
     const logRes = await fetch('/api/log?limit=10');
@@ -89,7 +95,9 @@ function resettaWhatsApp() {
   }
 }
 
+// Avvia l'aggiornamento periodico dello stato
+
 document.addEventListener('DOMContentLoaded', () => {
   aggiornaStato();
-  setInterval(aggiornaStato, 10000);
+  setInterval(aggiornaStato, 10000); // aggiornamento ogni 10 secondi
 });
