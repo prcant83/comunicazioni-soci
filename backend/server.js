@@ -246,8 +246,8 @@ function aggiornaSegnaleGSM() {
     console.log('✅ Porta seriale aperta per aggiornare segnale GSM.');
 
     const parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
-
     let atRisposto = false;
+    let csqRisposto = false;
 
     parser.on('data', (line) => {
       console.log('📶 Risposta modem:', line);
@@ -257,10 +257,11 @@ function aggiornaSegnaleGSM() {
         console.log('✅ Modem pronto, ora chiedo il segnale...');
         setTimeout(() => {
           port.write('AT+CSQ\r');
-        }, 500); // mezzo secondo dopo OK
+        }, 500);
       }
 
-      if (line.includes('+CSQ:')) {
+      if (line.includes('+CSQ:') && !csqRisposto) {
+        csqRisposto = true;
         const match = line.match(/\+CSQ:\s*(\d+),/);
         if (match) {
           const csq = parseInt(match[1]);
@@ -272,15 +273,10 @@ function aggiornaSegnaleGSM() {
             timestamp: Date.now()
           };
           console.log(`📶 Segnale aggiornato: ${ultimoSegnaleGSM.risposta}`);
-          port.close();
         }
+        port.close();
       }
     });
-
-    setTimeout(() => {
-      console.log('⌛ Attendo prima di inviare AT...');
-      port.write('AT\r');
-    }, 2000);
 
     setTimeout(() => {
       if (!atRisposto) {
@@ -301,6 +297,7 @@ app.get('/api/stato/gsm-signal', (req, res) => {
     res.status(500).json({ error: 'Segnale GSM non disponibile' });
   }
 });
+
 
 // 🔄 Riavvia Raspberry
 app.post('/api/riavvia', (req, res) => {
