@@ -89,25 +89,26 @@ tr:nth-child(even) {
   background: #f9f9f9;
 }
 
-/* Calendario */
 #calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 5px;
   margin: 20px auto;
-  max-width: 600px;
+  max-width: 420px;
+  text-align: center;
 }
 
 .calendar-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
 .calendar-header button {
   padding: 5px 10px;
-  font-size: 1.1em;
+  font-size: 1em;
   background: #4caf50;
   color: white;
   border: none;
@@ -122,21 +123,20 @@ tr:nth-child(even) {
 }
 
 .calendar-days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  font-weight: bold;
-  margin-bottom: 5px;
+  display: contents; /* 🔥 cambia: i giorni si allineano alla griglia principale */
 }
 
-.calendar-cell {
+.calendar-cell, .calendar-days div {
   background: #eee;
   padding: 10px;
-  text-align: center;
+  min-width: 50px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 5px;
-  cursor: pointer;
   font-size: 0.9em;
-  min-height: 40px;
+  cursor: pointer;
 }
 
 .calendar-cell.has-log {
@@ -145,30 +145,8 @@ tr:nth-child(even) {
 }
 
 .calendar-cell.empty {
-  background: none;
+  background: transparent;
   cursor: default;
-}
-
-/* Pulsanti esportazione */
-.btn-group {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.btn-group button {
-  background-color: #4caf50;
-  padding: 10px 15px;
-  border-radius: 6px;
-  border: none;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.btn-group button:hover {
-  background-color: #43a047;
 }
 
 /* Link \"Torna alla Home\" */
