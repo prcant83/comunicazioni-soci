@@ -32,6 +32,7 @@ async function sendEmail(to, subject, message, filePathTemp = null, originalName
 
   let allegatoSalvato = '';
 
+  // Gestione allegato se presente
   if (filePathTemp && originalName) {
     const estensione = path.extname(originalName) || '.dat';
     const nomeFile = `allegato_${Date.now()}${estensione}`;
@@ -52,10 +53,15 @@ async function sendEmail(to, subject, message, filePathTemp = null, originalName
     allegatoSalvato = `allegati/email/${nomeFile}`;
   }
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log(`📧 Email inviata a ${to}: ${info.response}`);
-
-  return allegatoSalvato; // 👈 questo permette di loggare correttamente il file
+  // Invio email con protezione try-catch
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 Email inviata a ${to}: ${info.response}`);
+    return allegatoSalvato;
+  } catch (error) {
+    console.error('❌ Errore durante invio email:', error.message);
+    throw error; // Rilancia l'errore per gestirlo nel server.js
+  }
 }
 
 module.exports = { sendEmail };
