@@ -39,30 +39,26 @@ async function caricaLog(filtri = {}) {
 
 async function aggiornaCalendario() {
   const res = await fetch('/api/log/days');
-  const giorniLog = await res.json(); // array tipo ["2025-04-27", ...]
+  const giorniLog = await res.json(); // ["2025-04-27", ...]
+
+  // Aggiorna intestazione mese/anno
+  document.getElementById('meseAnno').innerText =
+    new Date(annoCorrente, meseCorrente).toLocaleString('it-IT', { month: 'long', year: 'numeric' }).toUpperCase();
 
   const calendario = document.getElementById('calendar');
   calendario.innerHTML = '';
-
-  const intestazione = document.createElement('div');
-  intestazione.className = 'calendar-header';
-  intestazione.innerHTML = `
-    <button onclick="cambiaMese(-1)"><<</button>
-    <span>${new Date(annoCorrente, meseCorrente).toLocaleString('it-IT', { month: 'long', year: 'numeric' }).toUpperCase()}</span>
-    <button onclick="cambiaMese(1)">>></button>
-  `;
-  calendario.appendChild(intestazione);
 
   const giorniSettimana = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
   giorniSettimana.forEach(g => {
     const div = document.createElement('div');
     div.textContent = g;
-    div.className = 'calendar-cell';
+    div.className = 'calendar-days';
     calendario.appendChild(div);
   });
 
   const primoGiornoMese = new Date(annoCorrente, meseCorrente, 1);
-  const giornoSettimana = (primoGiornoMese.getDay() + 6) % 7; // Lunedì = 0
+  const giornoSettimana = (primoGiornoMese.getDay() + 6) % 7; // 0 = Lunedì
+
   const giorniNelMese = new Date(annoCorrente, meseCorrente + 1, 0).getDate();
 
   for (let i = 0; i < giornoSettimana; i++) {
