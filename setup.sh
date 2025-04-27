@@ -52,7 +52,8 @@ SMTP_USER=smtp@orsognacantina.it
 SMTP_PASS=173hfyejdhHRHDJE,11
 FROM_EMAIL=noreplay@orsognacantina.it
 EOL
-  echo "✅ File .env creato. Modifica manualmente le credenziali SMTP!"
+  chmod 600 .env
+  echo "✅ File .env creato e protetto. Modifica manualmente le credenziali SMTP!"
 fi
 
 # Cartelle necessarie
@@ -118,7 +119,7 @@ PRAGMA foreign_keys=on;
 EOF
 
 # Ricrea tabella log_invio
-echo "📚 Creo tabella log_invio..."
+echo "📚 Creo o aggiorno tabella log_invio..."
 sqlite3 ./database/soci.sqlite <<EOF
 CREATE TABLE IF NOT EXISTS log_invio (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,7 +141,7 @@ Description=Comunicazioni Soci
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/npm start
+ExecStart=/usr/bin/node backend/server.js
 WorkingDirectory=$APP_DIR
 Restart=always
 Environment=NODE_ENV=production
