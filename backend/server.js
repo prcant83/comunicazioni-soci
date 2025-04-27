@@ -59,6 +59,38 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
+// 📱 Invia SMS
+app.post('/send-sms', async (req, res) => {
+  const { numero, rubrica, messaggio } = req.body;
+
+  const invia = async (destinatario) => {
+    try {
+      await sendSMS(destinatario, messaggio);
+      salvaLogInvio('sms', destinatario, messaggio, rubrica || null, '');
+    } catch (err) {
+      console.error(`❌ Errore invio SMS a ${destinatario}:`, err.message);
+      salvaLogInvio('sms', destinatario, `ERRORE: ${err.message}`, rubrica || null);
+    }
+  };
+
+  if (numero) {
+    await invia(numero);
+    return res.send('✅ SMS inviato al numero specificato');
+  }
+
+  if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
+
+  db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
+    if (err) return res.status(500).send('Errore DB');
+    if (!rows.length) return res.status(404).send('Rubrica vuota');
+    for (const row of rows) {
+      await invia(row.telefono);
+      await new Promise(resolve => setTimeout(resolve, 4000)); // ⏳ Aspetta 4 secondi tra un SMS e l'altro
+    }
+    res.send('✅ SMS inviati a tutta la rubrica');
+  });
+});
+
 // 📧 Invia Email
 app.post('/send-email', upload.single('allegato'), async (req, res) => {
   const { to, subject, message, rubrica } = req.body;
@@ -81,7 +113,7 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
       if (!rows.length) return res.status(404).send('Rubrica vuota');
       for (const row of rows) {
         await invia(row.email);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 4000)); // ⏳ Aspetta 4 secondi tra un'email e l'altra
       }
       res.send('✅ Email inviate a tutti i contatti della rubrica');
     });
