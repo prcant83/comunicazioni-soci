@@ -1,4 +1,5 @@
-// backend/server.js aggiornato completo
+// backend/server.js aggiornato definitivo
+
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
@@ -16,16 +17,13 @@ const app = express();
 const PORT = 3000;
 const pathProgetto = '/home/riccardo/comunicazioni-soci';
 
-// Avvia WhatsApp
 startWhatsApp();
 
-// DB
 const db = new sqlite3.Database('./database/soci.sqlite', (err) => {
   if (err) console.error('❌ Errore connessione DB:', err.message);
   else console.log('✅ Database SQLite collegato.');
 });
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
@@ -33,14 +31,12 @@ app.use('/allegati/email', express.static(path.join(__dirname, '../allegati/emai
 app.use('/allegati/whatsapp', express.static(path.join(__dirname, '../allegati/whatsapp')));
 app.use('/backend', express.static(__dirname));
 
-// Multer configurazione
 const upload = multer({ dest: 'tmp/' });
 
 // 📥 Importa CSV
 app.post('/upload', upload.single('file'), (req, res) => {
   const results = [];
   const rubrica = req.body.rubrica || 'Generica';
-
   fs.createReadStream(req.file.path)
     .pipe(csv())
     .on('data', (data) => {
@@ -95,7 +91,7 @@ app.post('/send-email', upload.single('allegato'), async (req, res) => {
   }
 });
 
-// 📚 Rubriche
+// 📚 Rubriche e Contatti
 app.get('/rubriche', (req, res) => {
   db.all("SELECT DISTINCT rubrica FROM soci", [], (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
@@ -117,7 +113,6 @@ app.delete('/rubriche/:nome', (req, res) => {
   });
 });
 
-// 👤 Contatti
 app.delete('/rubriche/contatto/:id', (req, res) => {
   db.run("DELETE FROM soci WHERE id = ?", [req.params.id], function (err) {
     if (err) return res.status(500).send('Errore eliminazione contatto');
@@ -127,25 +122,21 @@ app.delete('/rubriche/contatto/:id', (req, res) => {
 
 app.post('/rubriche/contatto', (req, res) => {
   const { nome, telefono, email, rubrica } = req.body;
-  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)",
-    [nome, telefono, email, rubrica],
-    function (err) {
-      if (err) return res.status(500).send('Errore inserimento');
-      res.send(`Contatto ${nome} aggiunto`);
-    });
+  db.run("INSERT INTO soci (nome, telefono, email, rubrica) VALUES (?, ?, ?, ?)", [nome, telefono, email, rubrica], function (err) {
+    if (err) return res.status(500).send('Errore inserimento');
+    res.send(`Contatto ${nome} aggiunto`);
+  });
 });
 
 app.put('/rubriche/contatto/:id', (req, res) => {
   const { nome, telefono, email } = req.body;
-  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?",
-    [nome, telefono, email, req.params.id],
-    function (err) {
-      if (err) return res.status(500).send('Errore aggiornamento');
-      res.send('Contatto aggiornato');
-    });
+  db.run("UPDATE soci SET nome = ?, telefono = ?, email = ? WHERE id = ?", [nome, telefono, email, req.params.id], function (err) {
+    if (err) return res.status(500).send('Errore aggiornamento');
+    res.send('Contatto aggiornato');
+  });
 });
 
-// 📜 Log
+// 📋 Log Invii
 app.get('/api/log', (req, res) => {
   const { tipo, start, end, limit } = req.query;
   let sql = "SELECT * FROM log_invio";
@@ -219,75 +210,29 @@ app.post('/send-whatsapp', upload.single('allegato'), async (req, res) => {
   });
 });
 
-// 📱 SMS
-app.post('/send-sms', async (req, res) => {
-  const { rubrica, messaggio, numero } = req.body;
-
-  const invia = async (numeroDest) => {
-    try {
-      await sendSMS(numeroDest, messaggio);
-      salvaLogInvio('sms', numeroDest, messaggio, rubrica || null, '');
-    } catch (err) {
-      console.error(`❌ Errore invio SMS a ${numeroDest}:`, err.message);
-      salvaLogInvio('sms', numeroDest, `ERRORE: ${err.message}`, rubrica || null);
-    }
-  };
-
-  if (numero) {
-    await invia(numero);
-    return res.send('✅ SMS inviato al numero specificato');
-  }
-
-  if (!rubrica) return res.status(400).send('❌ Rubrica non specificata');
-
-  db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
-    if (err) return res.status(500).send('Errore DB');
-    if (!rows.length) return res.status(404).send('Rubrica vuota');
-    for (const row of rows) {
-      await invia(row.telefono);
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    }
-    res.send('✅ Messaggi SMS inviati con successo');
-  });
-});
-
 // 📟 Stato WhatsApp
 app.get('/api/stato/whatsapp-qr', (req, res) => {
   const qrPath = path.join(__dirname, '../session/Default/qrcode.png');
   const qrCode = fs.existsSync(qrPath) ? fs.readFileSync(qrPath, { encoding: 'base64' }) : null;
-  res.json({
-    pronto: statoWhatsApp.pronto,
-    qrCode: qrCode,
-    errore: statoWhatsApp.errore || null
-  });
+  res.json({ pronto: statoWhatsApp.pronto, qrCode: qrCode, errore: statoWhatsApp.errore || null });
 });
 
-// 📶 Stato GSM definitivo
+// 📶 Stato GSM (lettura gammu monitor 1)
 app.get('/api/stato/gsm-signal', (req, res) => {
-  let stdout = '';
-
+  let output = '';
   const child = exec('gammu --monitor 1');
 
   child.stdout.on('data', (data) => {
-    stdout += data.toString();
-
-    if (stdout.includes('Network level')) {
-      // abbiamo raccolto tutto quello che ci serve
-      const match = stdout.match(/Signal strength\s*:\s*(-?\d+) dBm[\s\S]*Network level\s*:\s*(\d+)%/i);
-
+    output += data.toString();
+    if (output.includes('Network level')) {
+      const match = output.match(/Signal strength\s*:\s*(-?\d+) dBm[\s\S]*Network level\s*:\s*(\d+)%/i);
       if (match) {
         const segnale_dBm = parseInt(match[1]);
         const percentuale = parseInt(match[2]);
-        res.json({
-          segnale_dBm,
-          percentuale,
-          risposta: `📶 Segnale: ${percentuale}% (${segnale_dBm} dBm)`
-        });
+        res.json({ segnale_dBm, percentuale, risposta: `📶 Segnale: ${percentuale}% (${segnale_dBm} dBm)` });
       } else {
         res.status(500).json({ error: "Impossibile leggere il segnale GSM" });
       }
-
-      // Uccidiamo il processo subito dopo aver letto
       child.kill();
     }
   });
@@ -307,7 +252,6 @@ app.get('/api/stato/gsm-signal', (req, res) => {
     }
   });
 });
-
 
 // 🔄 Riavvia Raspberry
 app.post('/api/riavvia', (req, res) => {
@@ -333,7 +277,7 @@ app.post('/api/whatsapp-reset', (req, res) => {
   });
 });
 
-// ▶️ Server
+// ▶️ Server attivo
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
