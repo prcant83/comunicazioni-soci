@@ -10,6 +10,7 @@
   <main class="container">
     <h1 class="title">📧 Invia Email</h1>
 
+    <!-- Form invio email -->
     <form id="emailForm" class="form-section" enctype="multipart/form-data">
       <label for="destinatario">Destinatario (email o rubrica):</label>
       <select id="destinatario" name="destinatario" required>
@@ -17,6 +18,7 @@
         <option value="__singola__">📩 Email singola</option>
       </select>
 
+      <!-- Campo email visibile solo per invio singolo -->
       <div id="emailSingola" style="display:none;">
         <label for="email">Email destinatario:</label>
         <input type="email" id="email" name="email" placeholder="esempio@email.it" />
@@ -34,16 +36,20 @@
       <button type="submit">📤 Invia Email</button>
     </form>
 
+    <!-- Barra di avanzamento invio -->
     <div class="progress-bar" id="progressContainer">
       <div class="progress-bar-inner" id="progressBar">0%</div>
     </div>
 
+    <!-- Esito invio -->
     <div id="esito" class="status"></div>
 
+    <!-- Link per tornare alla home -->
     <a href="index.html" class="back-link">← Torna alla Home</a>
   </main>
 
   <script>
+    // Carica rubriche dal server
     async function caricaRubriche() {
       const response = await fetch('/rubriche');
       const rubriche = await response.json();
@@ -56,15 +62,13 @@
       });
     }
 
+    // Mostra il campo email se viene selezionata l'opzione email singola
     document.getElementById('destinatario').addEventListener('change', (e) => {
       const emailSingola = document.getElementById('emailSingola');
-      if (e.target.value === '__singola__') {
-        emailSingola.style.display = 'block';
-      } else {
-        emailSingola.style.display = 'none';
-      }
+      emailSingola.style.display = (e.target.value === '__singola__') ? 'block' : 'none';
     });
 
+    // Gestione invio email
     document.getElementById('emailForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
@@ -79,6 +83,7 @@
       progressContainer.style.display = 'block';
       form.querySelector('button').disabled = true;
 
+      // Aggiunta destinazione email o rubrica nel FormData
       if (form.destinatario.value === '__singola__') {
         const to = form.email.value.trim();
         if (!to) return alert("Inserisci un indirizzo email valido.");
@@ -87,12 +92,15 @@
         formData.append('rubrica', form.destinatario.value);
       }
 
+      // Aggiunta oggetto e messaggio
       formData.append('subject', form.oggetto.value);
       formData.append('message', form.messaggio.value);
 
+      // Invio tramite XMLHttpRequest
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/send-email', true);
 
+      // Aggiorna la barra di progresso durante l'upload
       xhr.upload.onprogress = function (e) {
         if (e.lengthComputable) {
           const percent = Math.round((e.loaded / e.total) * 100);
@@ -101,6 +109,7 @@
         }
       };
 
+      // Gestione esito invio
       xhr.onload = function () {
         form.querySelector('button').disabled = false;
         progressBar.style.width = '100%';
@@ -114,14 +123,17 @@
         }
       };
 
+      // Gestione errori di rete
       xhr.onerror = function () {
         form.querySelector('button').disabled = false;
         esito.textContent = '❌ Errore di rete.';
       };
 
+      // Invia il form al server
       xhr.send(formData);
     });
 
+    // Avvia caricamento rubriche appena la pagina è pronta
     caricaRubriche();
   </script>
 </body>
