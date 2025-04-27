@@ -1,15 +1,20 @@
+// backend/sms.js
 const { exec } = require('child_process');
 
-// Invia SMS usando Gammu, forzando EMS per supporto concatenamento
+/**
+ * Invia un SMS concatenato tramite Gammu
+ * @param {string} numero - Numero di telefono del destinatario
+ * @param {string} messaggio - Testo del messaggio da inviare
+ * @returns {Promise<string>} - Output del comando Gammu
+ */
 function sendSMS(numero, messaggio) {
   return new Promise((resolve, reject) => {
-    // Protegge eventuali virgolette nel messaggio
+    // Protegge le virgolette interne
     const safeMessage = messaggio.replace(/"/g, '\\"');
 
-    // Usa il comando EMS invece di TEXT per supportare SMS concatenati
+    // Comando Gammu per invio tramite EMS (concatenato)
     const comando = `echo "${safeMessage}" | gammu --sendsms EMS ${numero}`;
 
-    // Esegue il comando
     exec(comando, (error, stdout, stderr) => {
       if (error) {
         console.error('❌ Errore invio SMS:', error.message);
