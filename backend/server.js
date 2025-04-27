@@ -262,9 +262,9 @@ app.get('/api/stato/whatsapp-qr', (req, res) => {
   });
 });
 
-// 📶 Stato GSM usando 'gammu --monitor 1' (lettura immediata)
+// 📶 Stato GSM - Aspetta fino a 8 secondi l'output di gammu
 app.get('/api/stato/gsm-signal', (req, res) => {
-  exec('gammu --monitor 1 -once', (error, stdout, stderr) => {
+  const child = exec('gammu --monitor 1', { timeout: 8000 }, (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ error: stderr || error.message });
     }
@@ -283,10 +283,12 @@ app.get('/api/stato/gsm-signal', (req, res) => {
       res.status(500).json({ error: "Impossibile leggere il segnale GSM" });
     }
   });
+
+  // Termina il processo massimo dopo 8 secondi (di sicurezza)
+  setTimeout(() => {
+    child.kill();
+  }, 8000);
 });
-
-
-
 
 // 🔄 Riavvia Raspberry
 app.post('/api/riavvia', (req, res) => {
