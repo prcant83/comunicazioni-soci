@@ -101,5 +101,5 @@ function resettaWhatsApp() {
 
 document.addEventListener('DOMContentLoaded', () => {
   aggiornaStato();
-  setInterval(aggiornaStato, 10000);
+  setInterval(aggiornaStato, 10000); // aggiorna ogni 10 secondi
 });
