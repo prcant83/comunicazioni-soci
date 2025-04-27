@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Invia SMS</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
   <script defer>
     async function caricaRubriche() {
       const response = await fetch('/rubriche');
@@ -35,6 +35,13 @@
         const progressBar = document.getElementById('progressBar');
         const progressContainer = document.getElementById('progressContainer');
 
+        const testo = form.messaggio.value.trim();
+
+        if (testo.length > 459) {
+          alert("❗ Il messaggio è troppo lungo! Massimo 459 caratteri per evitare errori.");
+          return;
+        }
+
         esito.textContent = '';
         progressBar.style.width = '0%';
         progressBar.textContent = '0%';
@@ -42,7 +49,7 @@
         form.querySelector('button').disabled = true;
 
         const body = {
-          messaggio: form.messaggio.value.trim(),
+          messaggio: testo,
         };
 
         if (form.destinatario.value === '__singolo__') {
@@ -78,55 +85,4 @@
 
     function aggiornaContatore() {
       const testo = document.getElementById('messaggio').value;
-      const usaUnicode = /[^\u0000-\u007F]/.test(testo);
-      const lunghezza = testo.length;
-      const limite = usaUnicode ? 70 : 160;
-      const segmento = usaUnicode ? 67 : 153;
-      const smsStimati = lunghezza <= limite ? 1 : Math.ceil(lunghezza / segmento);
-
-      document.getElementById('contatore').innerText = `${lunghezza} caratteri, ${smsStimati} SMS stimati`;
-    }
-  </script>
-
-  <style>
-    .counter {
-      margin-top: 10px;
-      font-size: 0.9em;
-      color: #555;
-    }
-  </style>
-</head>
-
-<body>
-  <main class="container">
-    <h1 class="title">📱 Invia SMS (anche lunghi)</h1>
-
-    <form id="smsForm" class="form-section">
-      <label for="destinatario">Destinatario:</label>
-      <select id="destinatario" name="destinatario" required>
-        <option value="">-- Seleziona rubrica o numero singolo --</option>
-        <option value="__singolo__">📲 Numero singolo</option>
-      </select>
-
-      <div id="numeroSingolo" style="display:none;">
-        <label for="numero">Numero di telefono:</label>
-        <input type="text" id="numero" name="numero" placeholder="+39..." />
-      </div>
-
-      <label for="messaggio">Messaggio:</label>
-      <textarea id="messaggio" name="messaggio" rows="8" required></textarea>
-      <div class="counter" id="contatore">0 caratteri, 0 SMS stimati</div>
-
-      <button type="submit">📤 Invia SMS</button>
-    </form>
-
-    <div class="progress-bar" id="progressContainer">
-      <div class="progress-bar-inner" id="progressBar">0%</div>
-    </div>
-
-    <div id="esito" class="status"></div>
-
-    <a href="index.html" class="back-link">← Torna alla Home</a>
-  </main>
-</body>
-</html>
+      const usaUnicode = /[^
