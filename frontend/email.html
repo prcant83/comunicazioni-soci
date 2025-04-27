@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Invia Email</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .counter {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
   <main class="container">
     <h1 class="title">📧 Invia Email</h1>
 
-    <!-- Form invio email -->
     <form id="emailForm" class="form-section" enctype="multipart/form-data">
       <label for="destinatario">Destinatario (email o rubrica):</label>
       <select id="destinatario" name="destinatario" required>
@@ -18,7 +24,6 @@
         <option value="__singola__">📩 Email singola</option>
       </select>
 
-      <!-- Campo email visibile solo per invio singolo -->
       <div id="emailSingola" style="display:none;">
         <label for="email">Email destinatario:</label>
         <input type="email" id="email" name="email" placeholder="esempio@email.it" />
@@ -30,26 +35,22 @@
       <label for="messaggio">Messaggio:</label>
       <textarea id="messaggio" name="messaggio" rows="6" required></textarea>
 
-      <label for="allegato">📎 Allegato (PDF, JPG, PNG):</label>
+      <label for="allegato">📎 Allegato (PDF, JPG, PNG - Max 5MB):</label>
       <input type="file" id="allegato" name="allegato" accept=".pdf,.jpg,.jpeg,.png" />
 
       <button type="submit">📤 Invia Email</button>
     </form>
 
-    <!-- Barra di avanzamento invio -->
     <div class="progress-bar" id="progressContainer">
       <div class="progress-bar-inner" id="progressBar">0%</div>
     </div>
 
-    <!-- Esito invio -->
     <div id="esito" class="status"></div>
 
-    <!-- Link per tornare alla home -->
     <a href="index.html" class="back-link">← Torna alla Home</a>
   </main>
 
   <script>
-    // Carica rubriche dal server
     async function caricaRubriche() {
       const response = await fetch('/rubriche');
       const rubriche = await response.json();
@@ -62,78 +63,104 @@
       });
     }
 
-    // Mostra il campo email se viene selezionata l'opzione email singola
     document.getElementById('destinatario').addEventListener('change', (e) => {
       const emailSingola = document.getElementById('emailSingola');
       emailSingola.style.display = (e.target.value === '__singola__') ? 'block' : 'none';
     });
 
-    // Gestione invio email
     document.getElementById('emailForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
-      const formData = new FormData(form);
-
+      const allegato = form.allegato.files[0];
       const progressBar = document.getElementById('progressBar');
       const progressContainer = document.getElementById('progressContainer');
       const esito = document.getElementById('esito');
+
       esito.textContent = '';
       progressBar.style.width = '0%';
       progressBar.textContent = '0%';
       progressContainer.style.display = 'block';
       form.querySelector('button').disabled = true;
 
-      // Aggiunta destinazione email o rubrica nel FormData
-      if (form.destinatario.value === '__singola__') {
-        const to = form.email.value.trim();
-        if (!to) return alert("Inserisci un indirizzo email valido.");
-        formData.append('to', to);
-      } else {
-        formData.append('rubrica', form.destinatario.value);
+      // Controllo dimensione allegato
+      if (allegato && allegato.size > 5 * 1024 * 1024) {
+        alert('⚠️ L\'allegato supera il limite di 5MB.');
+        form.querySelector('button').disabled = false;
+        return;
       }
 
-      // Aggiunta oggetto e messaggio
-      formData.append('subject', form.oggetto.value);
-      formData.append('message', form.messaggio.value);
-
-      // Invio tramite XMLHttpRequest
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/send-email', true);
-
-      // Aggiorna la barra di progresso durante l'upload
-      xhr.upload.onprogress = function (e) {
-        if (e.lengthComputable) {
-          const percent = Math.round((e.loaded / e.total) * 100);
-          progressBar.style.width = percent + '%';
-          progressBar.textContent = percent + '%';
+      if (form.destinatario.value === '__singola__') {
+        // Invio email singola
+        const to = form.email.value.trim();
+        if (!to) {
+          alert("Inserisci un indirizzo email valido.");
+          form.querySelector('button').disabled = false;
+          return;
         }
-      };
 
-      // Gestione esito invio
-      xhr.onload = function () {
-        form.querySelector('button').disabled = false;
-        progressBar.style.width = '100%';
-        progressBar.textContent = '100%';
-        if (xhr.status === 200) {
-          esito.textContent = '✅ Email inviata con successo!';
+        const formData = new FormData();
+        formData.append('to', to);
+        formData.append('subject', form.oggetto.value);
+        formData.append('message', form.messaggio.value);
+        if (allegato) formData.append('allegato', allegato);
+
+        await inviaEmailSingola(formData);
+
+      } else {
+        // Invio email multipla
+        try {
+          const rubricheEmails = await fetch(`/rubriche/${encodeURIComponent(form.destinatario.value)}`).then(res => res.json());
+          if (!rubricheEmails.length) {
+            alert('❌ Nessun contatto trovato nella rubrica selezionata.');
+            form.querySelector('button').disabled = false;
+            return;
+          }
+
+          let inviati = 0;
+          for (const contatto of rubricheEmails) {
+            const formData = new FormData();
+            formData.append('to', contatto.email);
+            formData.append('subject', form.oggetto.value);
+            formData.append('message', form.messaggio.value);
+            if (allegato) formData.append('allegato', allegato);
+
+            await inviaEmailSingola(formData);
+
+            inviati++;
+            const percent = Math.round((inviati / rubricheEmails.length) * 100);
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+
+            await new Promise(resolve => setTimeout(resolve, 4000));
+          }
+
+          esito.textContent = '✅ Tutte le email inviate!';
           form.reset();
           document.getElementById('emailSingola').style.display = 'none';
-        } else {
-          esito.textContent = `❌ Errore: ${xhr.responseText}`;
+
+        } catch (error) {
+          console.error(error);
+          esito.textContent = '❌ Errore durante l\'invio delle email.';
         }
-      };
 
-      // Gestione errori di rete
-      xhr.onerror = function () {
         form.querySelector('button').disabled = false;
-        esito.textContent = '❌ Errore di rete.';
-      };
-
-      // Invia il form al server
-      xhr.send(formData);
+      }
     });
 
-    // Avvia caricamento rubriche appena la pagina è pronta
+    async function inviaEmailSingola(formData) {
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/send-email', true);
+        xhr.send(formData);
+        await new Promise((resolve, reject) => {
+          xhr.onload = () => (xhr.status === 200 ? resolve() : reject(xhr.responseText));
+          xhr.onerror = () => reject('Errore di rete');
+        });
+      } catch (error) {
+        console.error('Errore invio email:', error);
+      }
+    }
+
     caricaRubriche();
   </script>
 </body>
