@@ -75,6 +75,9 @@ th, td {
   padding: 0.75em;
   border: 1px solid #ddd;
   text-align: left;
+  word-break: break-word; /* 🔥 forza andare a capo */
+  max-width: 200px;        /* 🔥 limite massimo celle */
+  vertical-align: top;     /* 🔥 allinea in alto */
 }
 
 th {
