@@ -239,15 +239,29 @@ function aggiornaSegnaleGSM() {
 
   port.open(err => {
     if (err) {
-      console.error('Errore apertura porta seriale:', err.message);
+      console.error('❌ Errore apertura porta seriale:', err.message);
       return;
     }
 
+    console.log('✅ Porta seriale aperta per aggiornare segnale GSM.');
+
     const parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
 
+    let atRisposto = false;
+
     parser.on('data', (line) => {
+      console.log('📶 Risposta modem:', line);
+
+      if (!atRisposto && line.includes('OK')) {
+        atRisposto = true;
+        console.log('✅ Modem pronto, ora chiedo il segnale...');
+        setTimeout(() => {
+          port.write('AT+CSQ\r');
+        }, 500); // mezzo secondo dopo OK
+      }
+
       if (line.includes('+CSQ:')) {
-        const match = line.match(/\+CSQ:\\s*(\\d+),/);
+        const match = line.match(/\+CSQ:\s*(\d+),/);
         if (match) {
           const csq = parseInt(match[1]);
           const percentuale = Math.round((csq / 31) * 100);
@@ -257,13 +271,23 @@ function aggiornaSegnaleGSM() {
             risposta: `📶 Segnale: ${percentuale}% (CSQ ${csq})`,
             timestamp: Date.now()
           };
+          console.log(`📶 Segnale aggiornato: ${ultimoSegnaleGSM.risposta}`);
+          port.close();
         }
-        port.close();
       }
     });
 
-    port.write('AT+CSQ\\r');
-    setTimeout(() => port.close(), 5000);
+    setTimeout(() => {
+      console.log('⌛ Attendo prima di inviare AT...');
+      port.write('AT\r');
+    }, 2000);
+
+    setTimeout(() => {
+      if (!atRisposto) {
+        console.error('❌ Modem non ha risposto ad AT nemmeno dopo 3 secondi.');
+        port.close();
+      }
+    }, 5000);
   });
 }
 
