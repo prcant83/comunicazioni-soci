@@ -3,21 +3,22 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Invia un SMS concatenato tramite Gammu salvando su file temporaneo
+ * Invia un SMS concatenato tramite Gammu salvando in Unicode UCS2
  * @param {string} numero - Numero di telefono del destinatario
  * @param {string} messaggio - Testo del messaggio da inviare
- * @returns {Promise<string>} - Output del comando Gammu
+ * @returns {Promise<string>}
  */
 async function sendSMS(numero, messaggio) {
   return new Promise((resolve, reject) => {
     try {
       const filePath = path.join('/tmp', `sms_${Date.now()}.txt`);
-      fs.writeFileSync(filePath, messaggio, { encoding: 'utf8' });
+
+      // Salva il file in UTF-16 Big Endian (corretto per gammu)
+      fs.writeFileSync(filePath, Buffer.from(messaggio, 'utf16le').swap16());
 
       const comando = `gammu sendsms EMS ${numero} -unicodefiletext "${filePath}"`;
 
       exec(comando, (error, stdout, stderr) => {
-        // Elimina il file temporaneo comunque
         fs.unlinkSync(filePath);
 
         if (error) {
