@@ -1,4 +1,4 @@
-// backend/server.js aggiornato definitivo con cache segnale
+// backend/server.js aggiornato definitivo con cache segnale + correzione log + nuova API giorni
 
 const express = require('express');
 const path = require('path');
@@ -138,7 +138,7 @@ app.put('/rubriche/contatto/:id', (req, res) => {
   });
 });
 
-// 📋 Log
+// 📋 Log (corretto)
 app.get('/api/log', (req, res) => {
   const { tipo, start, end, limit } = req.query;
   let sql = "SELECT * FROM log_invio";
@@ -150,11 +150,11 @@ app.get('/api/log', (req, res) => {
     params.push(tipo);
   }
   if (start) {
-    conditions.push("data >= ?");
+    conditions.push("date(data) >= date(?)");
     params.push(start);
   }
   if (end) {
-    conditions.push("data <= ?");
+    conditions.push("date(data) <= date(?)");
     params.push(end);
   }
 
@@ -162,12 +162,24 @@ app.get('/api/log', (req, res) => {
     sql += " WHERE " + conditions.join(" AND ");
   }
 
-  sql += " ORDER BY id DESC LIMIT ?";
-  params.push(parseInt(limit) || 100);
+  sql += " ORDER BY id DESC";
+
+  if (limit) {
+    sql += " LIMIT ?";
+    params.push(parseInt(limit));
+  }
 
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).send('Errore recupero log');
     res.json(rows);
+  });
+});
+
+// 📅 API per date log
+app.get('/api/log/days', (req, res) => {
+  db.all("SELECT DISTINCT date(data) as giorno FROM log_invio ORDER BY giorno DESC", [], (err, rows) => {
+    if (err) return res.status(500).send('Errore recupero giorni log');
+    res.json(rows.map(r => r.giorno));
   });
 });
 
@@ -220,7 +232,6 @@ app.get('/api/stato/whatsapp-qr', (req, res) => {
 });
 
 // 📶 Stato GSM - CACHE
-
 let ultimoSegnaleGSM = { segnale_csq: null, percentuale: null, risposta: '', timestamp: 0 };
 
 function aggiornaSegnaleGSM() {
@@ -236,7 +247,7 @@ function aggiornaSegnaleGSM() {
 
     parser.on('data', (line) => {
       if (line.includes('+CSQ:')) {
-        const match = line.match(/\+CSQ:\s*(\d+),/);
+        const match = line.match(/\+CSQ:\\s*(\\d+),/);
         if (match) {
           const csq = parseInt(match[1]);
           const percentuale = Math.round((csq / 31) * 100);
@@ -251,7 +262,7 @@ function aggiornaSegnaleGSM() {
       }
     });
 
-    port.write('AT+CSQ\r');
+    port.write('AT+CSQ\\r');
     setTimeout(() => port.close(), 5000);
   });
 }
@@ -275,11 +286,11 @@ app.post('/api/riavvia', (req, res) => {
   });
 });
 
-// ⚙️ Aggiorna Sistema (setup completo)
+// ⚙️ Aggiorna Sistema
 app.post('/api/aggiorna', (req, res) => {
   exec(`cd ${pathProgetto} && bash setup.sh`, (err, stdout, stderr) => {
     if (err) return res.status(500).send('Errore aggiornamento: ' + (stderr || err.message));
-    res.send('✅ Setup completato:\n' + stdout);
+    res.send('✅ Setup completato:\\n' + stdout);
   });
 });
 
@@ -291,7 +302,7 @@ app.post('/api/whatsapp-reset', (req, res) => {
   });
 });
 
-// ▶️ Avvio Server
+// ▶️ Server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
