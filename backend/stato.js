@@ -5,8 +5,8 @@ async function aggiornaStato() {
   const sim = document.getElementById('moduloSIM');
   const log = document.getElementById('log');
 
+  // Stato WhatsApp
   try {
-    // Stato WhatsApp
     const qrRes = await fetch('/api/stato/whatsapp-qr');
     const qrJson = await qrRes.json();
     if (qrJson.pronto) {
@@ -16,8 +16,12 @@ async function aggiornaStato() {
     } else {
       qr.innerHTML = `<p style="color:red;">❌ WhatsApp non connesso</p>`;
     }
+  } catch (err) {
+    qr.innerHTML = '<p style="color:red;">Errore QR WhatsApp.</p>';
+  }
 
-    // Stato GSM aggiornato
+  // Stato GSM
+  try {
     const gsmRes = await fetch('/api/stato/gsm-signal');
     const gsmJson = await gsmRes.json();
 
@@ -46,23 +50,24 @@ async function aggiornaStato() {
 
       sim.textContent = '📟 SIM800C rilevato';
     } else {
-      segnale.textContent = 'Errore lettura segnale GSM';
-      tacche.innerHTML = '';
+      segnale.textContent = '📶 Nessun segnale GSM.';
       sim.textContent = '❌ SIM800C non rilevato';
+      tacche.innerHTML = '';
     }
+  } catch (err) {
+    segnale.textContent = 'Errore lettura segnale GSM.';
+    sim.textContent = '❌ SIM800C non rilevato.';
+    tacche.innerHTML = '';
+  }
 
-    // Ultimi Log
+  // Ultimi Log
+  try {
     const logRes = await fetch('/api/log?limit=10');
     const logs = await logRes.json();
     log.innerHTML = logs.length
       ? logs.map(e => `<li>[${e.data}] <b>${e.tipo.toUpperCase()}</b>: ${e.destinatario} → ${e.messaggio}</li>`).join('')
       : '<li>Nessun log recente.</li>';
-
   } catch (err) {
-    qr.innerHTML = '<p style="color:red;">Errore QR.</p>';
-    segnale.textContent = 'Errore GSM.';
-    tacche.innerHTML = '';
-    sim.textContent = 'Errore modulo SIM.';
     log.innerHTML = '<li>Errore caricamento log.</li>';
   }
 }
