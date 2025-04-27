@@ -11,18 +11,49 @@
       grid-template-columns: repeat(7, 1fr);
       gap: 5px;
       margin: 20px auto;
-      max-width: 400px;
+      max-width: 500px;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .calendar-header button {
+      padding: 5px 10px;
+      font-size: 1.1em;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .calendar-header span {
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+    .calendar-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 5px;
     }
     .calendar-cell {
-      padding: 8px;
       background: #eee;
+      padding: 10px;
       text-align: center;
       border-radius: 5px;
       cursor: pointer;
+      font-size: 0.9em;
     }
     .calendar-cell.has-log {
       background: #a3d5ff;
       font-weight: bold;
+    }
+    .calendar-cell.empty {
+      background: none;
+      cursor: default;
     }
     .btn-group {
       display: flex;
@@ -42,10 +73,12 @@
       background-color: #45a049;
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
+  <!-- Librerie PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
+
 <body>
   <main class="container">
     <h1 class="title">📋 Log Invii Soci</h1>
