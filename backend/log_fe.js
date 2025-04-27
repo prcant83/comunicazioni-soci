@@ -54,17 +54,15 @@ async function aggiornaCalendario() {
   calendario.appendChild(intestazione);
 
   const giorniSettimana = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
-  const intestazioneGiorni = document.createElement('div');
-  intestazioneGiorni.className = 'calendar-days';
   giorniSettimana.forEach(g => {
     const div = document.createElement('div');
     div.textContent = g;
-    intestazioneGiorni.appendChild(div);
+    div.className = 'calendar-cell';
+    calendario.appendChild(div);
   });
-  calendario.appendChild(intestazioneGiorni);
 
   const primoGiornoMese = new Date(annoCorrente, meseCorrente, 1);
-  const giornoSettimana = (primoGiornoMese.getDay() + 6) % 7; // 0=lunedì
+  const giornoSettimana = (primoGiornoMese.getDay() + 6) % 7; // Lunedì = 0
   const giorniNelMese = new Date(annoCorrente, meseCorrente + 1, 0).getDate();
 
   for (let i = 0; i < giornoSettimana; i++) {
