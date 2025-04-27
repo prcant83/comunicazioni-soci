@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Invia SMS</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .counter {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
   <main class="container">
@@ -24,6 +31,7 @@
 
       <label for="messaggio">Messaggio:</label>
       <textarea id="messaggio" name="messaggio" rows="6" required></textarea>
+      <div class="counter" id="contatore">0 caratteri, 0 SMS stimati</div>
 
       <button type="submit">📤 Invia SMS</button>
     </form>
@@ -55,52 +63,14 @@
       numeroSingolo.style.display = (e.target.value === '__singolo__') ? 'block' : 'none';
     });
 
-    document.getElementById('smsForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const esito = document.getElementById('esito');
-      const progressBar = document.getElementById('progressBar');
-      const progressContainer = document.getElementById('progressContainer');
+    function aggiornaContatore() {
+      const testo = document.getElementById('messaggio').value;
+      const contatore = document.getElementById('contatore');
 
-      esito.textContent = '';
-      progressBar.style.width = '0%';
-      progressBar.textContent = '0%';
-      progressContainer.style.display = 'block';
-      form.querySelector('button').disabled = true;
+      const usaUnicode = /[^\u0000-\u007F]/.test(testo);
+      const lunghezza = testo.length;
 
-      let body = { messaggio: form.messaggio.value };
+      let limite = usaUnicode ? 70 : 160;
+      let segmento = usaUnicode ? 67 : 153;
 
-      if (form.destinatario.value === '__singolo__') {
-        const numero = form.numero.value.trim();
-        if (!numero) {
-          alert("Inserisci un numero di telefono valido.");
-          form.querySelector('button').disabled = false;
-          return;
-        }
-        body.numero = numero;
-      } else {
-        body.rubrica = form.destinatario.value;
-      }
-
-      try {
-        const response = await fetch('/send-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-
-        const risultato = await response.text();
-        progressBar.style.width = '100%';
-        progressBar.textContent = '100%';
-        esito.textContent = risultato;
-      } catch (error) {
-        esito.textContent = '❌ Errore di rete.';
-      } finally {
-        form.querySelector('button').disabled = false;
-      }
-    });
-
-    caricaRubriche();
-  </script>
-</body>
-</html>
+      let sms = 1;
