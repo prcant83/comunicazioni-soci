@@ -83,9 +83,10 @@ app.post('/send-sms', async (req, res) => {
   db.all("SELECT telefono FROM soci WHERE rubrica = ?", [rubrica], async (err, rows) => {
     if (err) return res.status(500).send('Errore DB');
     if (!rows.length) return res.status(404).send('Rubrica vuota');
+
     for (const row of rows) {
       await invia(row.telefono);
-      await new Promise(resolve => setTimeout(resolve, 4000)); // ⏳ Aspetta 4 secondi tra un SMS e l'altro
+      await new Promise(resolve => setTimeout(resolve, 4000)); // ⏳ Pausa di sicurezza tra SMS
     }
     res.send('✅ SMS inviati a tutta la rubrica');
   });
