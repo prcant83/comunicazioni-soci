@@ -2,23 +2,17 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Invia SMS</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    .counter {
-      margin-top: 10px;
-      font-size: 0.9em;
-      color: #555;
-    }
-  </style>
+  <script src="sms.js" defer></script>
 </head>
 <body>
   <main class="container">
-    <h1 class="title">📱 Invia SMS</h1>
+    <h1 class="title">📱 Invia SMS (anche lunghi)</h1>
 
     <form id="smsForm" class="form-section">
-      <label for="destinatario">Destinatario (rubrica o singolo numero):</label>
+      <label for="destinatario">Destinatario:</label>
       <select id="destinatario" name="destinatario" required>
         <option value="">-- Seleziona rubrica o numero singolo --</option>
         <option value="__singolo__">📲 Numero singolo</option>
@@ -30,7 +24,7 @@
       </div>
 
       <label for="messaggio">Messaggio:</label>
-      <textarea id="messaggio" name="messaggio" rows="6" required></textarea>
+      <textarea id="messaggio" name="messaggio" rows="8" required></textarea>
       <div class="counter" id="contatore">0 caratteri, 0 SMS stimati</div>
 
       <button type="submit">📤 Invia SMS</button>
@@ -44,91 +38,5 @@
 
     <a href="index.html" class="back-link">← Torna alla Home</a>
   </main>
-
-  <script>
-    async function caricaRubriche() {
-      const response = await fetch('/rubriche');
-      const rubriche = await response.json();
-      const select = document.getElementById('destinatario');
-      rubriche.forEach(r => {
-        const opt = document.createElement('option');
-        opt.value = r;
-        opt.textContent = `📂 Rubrica: ${r}`;
-        select.appendChild(opt);
-      });
-    }
-
-    document.getElementById('destinatario').addEventListener('change', (e) => {
-      const numeroSingolo = document.getElementById('numeroSingolo');
-      numeroSingolo.style.display = (e.target.value === '__singolo__') ? 'block' : 'none';
-    });
-
-    function aggiornaContatore() {
-      const testo = document.getElementById('messaggio').value;
-      const contatore = document.getElementById('contatore');
-
-      const usaUnicode = /[^\u0000-\u007F]/.test(testo);
-      const lunghezza = testo.length;
-
-      let limite = usaUnicode ? 70 : 160;
-      let segmento = usaUnicode ? 67 : 153;
-
-      let sms = 1;
-      if (lunghezza > limite) {
-        sms = Math.ceil(lunghezza / segmento);
-      }
-
-      contatore.textContent = `${lunghezza} caratteri, ${sms} SMS stimati`;
-    }
-
-    document.getElementById('messaggio').addEventListener('input', aggiornaContatore);
-
-    document.getElementById('smsForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const esito = document.getElementById('esito');
-      const progressBar = document.getElementById('progressBar');
-      const progressContainer = document.getElementById('progressContainer');
-
-      esito.textContent = '';
-      progressBar.style.width = '0%';
-      progressBar.textContent = '0%';
-      progressContainer.style.display = 'block';
-      form.querySelector('button').disabled = true;
-
-      let body = { messaggio: form.messaggio.value };
-
-      if (form.destinatario.value === '__singolo__') {
-        const numero = form.numero.value.trim();
-        if (!numero) {
-          alert("Inserisci un numero di telefono valido.");
-          form.querySelector('button').disabled = false;
-          return;
-        }
-        body.numero = numero;
-      } else {
-        body.rubrica = form.destinatario.value;
-      }
-
-      try {
-        const response = await fetch('/send-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-
-        const risultato = await response.text();
-        progressBar.style.width = '100%';
-        progressBar.textContent = '100%';
-        esito.textContent = risultato;
-      } catch (error) {
-        esito.textContent = '❌ Errore di rete.';
-      } finally {
-        form.querySelector('button').disabled = false;
-      }
-    });
-
-    caricaRubriche();
-  </script>
 </body>
 </html>
