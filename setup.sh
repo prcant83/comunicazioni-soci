@@ -15,7 +15,8 @@ fi
 
 cd comunicazioni-soci
 
-# Aggiorna pacchetti
+# Aggiorna pacchetti sistema
+echo "🔄 Aggiorno pacchetti del sistema..."
 sudo apt update
 sudo apt upgrade -y
 
@@ -28,18 +29,22 @@ else
   echo "✅ Node.js già installato"
 fi
 
-# Altri pacchetti richiesti
+# Installa pacchetti Linux richiesti
+echo "📦 Installazione pacchetti Linux richiesti..."
 sudo apt install -y sqlite3 gammu gammu-smsd chromium usb-modeswitch libusb-1.0-0
 
-# Installa dipendenze Node.js
-npm install
+# Pulizia vecchi moduli Node
+echo "🧹 Pulizia node_modules precedenti..."
+rm -rf node_modules package-lock.json
 
-# Installa modulo QR Code per salvataggio immagini
-npm install qrcode
+# Installa dipendenze Node.js
+echo "📦 Installazione moduli Node.js..."
+npm install
 
 # File .env
 if [ ! -f ".env" ]; then
-cat <<EOL > .env
+  echo "🛠️  Creazione file .env con valori di esempio..."
+  cat <<EOL > .env
 SMTP_HOST=pro.eu.turbo-smtp.com
 SMTP_PORT=465
 SMTP_SECURE=true
@@ -47,13 +52,40 @@ SMTP_USER=smtp@orsognacantina.it
 SMTP_PASS=173hfyejdhHRHDJE,11
 FROM_EMAIL=noreplay@orsognacantina.it
 EOL
-echo "🛠️  File .env creato (modifica le credenziali SMTP)"
+  echo "✅ File .env creato. Modifica manualmente le credenziali SMTP!"
 fi
 
 # Cartelle necessarie
-mkdir -p database allegati/email allegati/whatsapp
+echo "🗂️  Creo cartelle necessarie..."
+mkdir -p database allegati/email allegati/whatsapp session/Default tmp backend/utils
 
-# Configura gammu per SIM800C
+# File log.js se mancante
+if [ ! -f "backend/utils/log.js" ]; then
+  echo "🛠️  Creo file backend/utils/log.js..."
+  cat <<EOF > backend/utils/log.js
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('./database/soci.sqlite');
+
+function salvaLogInvio(tipo, destinatario, messaggio, rubrica = null, allegato = '') {
+  const data = new Date().toISOString();
+  db.run(
+    "INSERT INTO log_invio (data, tipo, destinatario, rubrica, messaggio, allegato) VALUES (?, ?, ?, ?, ?, ?)",
+    [data, tipo, destinatario, rubrica, messaggio, allegato],
+    function (err) {
+      if (err) {
+        console.error('❌ Errore salvataggio log:', err.message);
+      } else {
+        console.log('📝 Log invio salvato.');
+      }
+    }
+  );
+}
+
+module.exports = { salvaLogInvio };
+EOF
+fi
+
+# Configura gammu
 echo "📱 Configuro gammu per SIM800C (ttyUSB0)..."
 sudo tee /etc/gammurc > /dev/null <<EOF
 [gammu]
@@ -61,8 +93,8 @@ port = /dev/ttyUSB0
 connection = at
 EOF
 
-# Aggiorna struttura soci con date
-echo "📐 Aggiorno struttura tabella soci..."
+# Aggiorna struttura tabella soci
+echo "📐 Aggiorno struttura database soci..."
 sqlite3 ./database/soci.sqlite <<EOF
 PRAGMA foreign_keys=off;
 
@@ -119,6 +151,7 @@ WantedBy=multi-user.target
 EOF
 
 # Abilita servizio all'avvio
+echo "🔄 Riavvio servizio systemd..."
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
 sudo systemctl enable comunicazioni-soci.service
