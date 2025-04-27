@@ -12,7 +12,7 @@ const { ReadlineParser } = require('@serialport/parser-readline');
 const { sendEmail } = require('./email');
 const { startWhatsApp, sendWhatsApp, statoWhatsApp } = require('./whatsapp');
 const { sendSMS } = require('./sms');
-const { salvaLogInvio } = require('./utils/log');
+const { salvaLogInvio } = require('./log');
 require('dotenv').config();
 
 const app = express();
