@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -6,26 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Invia SMS</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    .progress-bar {
-      width: 100%;
-      background-color: #f0f0f0;
-      border-radius: 5px;
-      overflow: hidden;
-      margin-top: 15px;
-      display: none;
-    }
-
-    .progress-bar-inner {
-      height: 20px;
-      background-color: #2196f3;
-      width: 0%;
-      color: white;
-      text-align: center;
-      line-height: 20px;
-      transition: width 0.3s;
-    }
-  </style>
 </head>
 <body>
   <main class="container">
@@ -53,7 +32,9 @@
       <div class="progress-bar-inner" id="progressBar">0%</div>
     </div>
 
-    <div id="esito" class="result" style="margin-top: 15px; text-align: center;"></div>
+    <div id="esito" class="status"></div>
+
+    <a href="index.html" class="back-link">← Torna alla Home</a>
   </main>
 
   <script>
@@ -71,11 +52,7 @@
 
     document.getElementById('destinatario').addEventListener('change', (e) => {
       const numeroSingolo = document.getElementById('numeroSingolo');
-      if (e.target.value === '__singolo__') {
-        numeroSingolo.style.display = 'block';
-      } else {
-        numeroSingolo.style.display = 'none';
-      }
+      numeroSingolo.style.display = (e.target.value === '__singolo__') ? 'block' : 'none';
     });
 
     document.getElementById('smsForm').addEventListener('submit', async (e) => {
@@ -100,34 +77,26 @@
           form.querySelector('button').disabled = false;
           return;
         }
-        await fetch('/send-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rubrica: null, messaggio: form.messaggio.value, numero })
-        }).then(res => res.text()).then(msg => {
-          progressBar.style.width = '100%';
-          progressBar.textContent = '100%';
-          esito.textContent = msg;
-        }).catch(err => {
-          esito.textContent = '❌ Errore di rete.';
-        }).finally(() => {
-          form.querySelector('button').disabled = false;
-        });
+        body.numero = numero;
       } else {
         body.rubrica = form.destinatario.value;
-        await fetch('/send-sms', {
+      }
+
+      try {
+        const response = await fetch('/send-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
-        }).then(res => res.text()).then(msg => {
-          progressBar.style.width = '100%';
-          progressBar.textContent = '100%';
-          esito.textContent = msg;
-        }).catch(err => {
-          esito.textContent = '❌ Errore di rete.';
-        }).finally(() => {
-          form.querySelector('button').disabled = false;
         });
+
+        const risultato = await response.text();
+        progressBar.style.width = '100%';
+        progressBar.textContent = '100%';
+        esito.textContent = risultato;
+      } catch (error) {
+        esito.textContent = '❌ Errore di rete.';
+      } finally {
+        form.querySelector('button').disabled = false;
       }
     });
 
