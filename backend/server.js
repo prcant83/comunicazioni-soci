@@ -270,7 +270,7 @@ let ultimoSegnaleGSM = { segnale_csq: null, percentuale: null, risposta: '', tim
 function aggiornaSegnaleGSM() {
   const port = new SerialPort({ path: '/dev/ttyUSB0', baudRate: 115200, autoOpen: false });
 
-  port.open(err => {
+  port.open((err) => {
     if (err) {
       console.error('❌ Errore apertura porta seriale:', err.message);
       return;
@@ -279,15 +279,17 @@ function aggiornaSegnaleGSM() {
     console.log('✅ Porta seriale aperta per aggiornare segnale GSM.');
 
     const parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+
     let atRisposto = false;
     let csqRisposto = false;
+    let timeoutGenerale;
 
     parser.on('data', (line) => {
       console.log('📶 Risposta modem:', line);
 
       if (!atRisposto && line.includes('OK')) {
         atRisposto = true;
-        console.log('✅ Modem pronto, ora chiedo il segnale...');
+        console.log('✅ Modem pronto, invio AT+CSQ...');
         setTimeout(() => {
           port.write('AT+CSQ\r');
         }, 500);
@@ -307,22 +309,32 @@ function aggiornaSegnaleGSM() {
           };
           console.log(`📶 Segnale aggiornato: ${ultimoSegnaleGSM.risposta}`);
         }
-        port.close();
+        clearTimeout(timeoutGenerale);
+        if (port.isOpen) port.close();
       }
     });
 
+    port.on('error', (error) => {
+      console.error('❌ Errore comunicazione seriale:', error.message);
+      if (port.isOpen) port.close();
+    });
+
+    timeoutGenerale = setTimeout(() => {
+      console.error('⌛ Timeout generale raggiunto. Nessuna risposta valida.');
+      if (port.isOpen) port.close();
+    }, 8000); // massimo 8 secondi
+
     setTimeout(() => {
-      if (!atRisposto) {
-        console.error('❌ Modem non ha risposto ad AT nemmeno dopo 3 secondi.');
-        port.close();
-      }
-    }, 5000);
+      console.log('⌛ Invio primo AT...');
+      port.write('AT\r');
+    }, 2000); // aspettiamo 2 secondi prima di mandare AT
   });
 }
 
 aggiornaSegnaleGSM();
 setInterval(aggiornaSegnaleGSM, 30000);
 
+// 📶 Endpoint Stato GSM
 app.get('/api/stato/gsm-signal', (req, res) => {
   if (ultimoSegnaleGSM.timestamp > 0) {
     res.json(ultimoSegnaleGSM);
@@ -331,6 +343,34 @@ app.get('/api/stato/gsm-signal', (req, res) => {
   }
 });
 
+// 🔄 Riavvia Raspberry
+app.post('/api/riavvia', (req, res) => {
+  exec('sudo reboot', (err) => {
+    if (err) return res.status(500).send('Errore riavvio: ' + err.message);
+    res.send('✅ Riavvio in corso...');
+  });
+});
+
+// ⚙️ Aggiorna Sistema
+app.post('/api/aggiorna', (req, res) => {
+  exec(`cd ${pathProgetto} && bash setup.sh`, (err, stdout, stderr) => {
+    if (err) return res.status(500).send('Errore aggiornamento: ' + (stderr || err.message));
+    res.send('✅ Setup completato:\n' + stdout);
+  });
+});
+
+// ❌ Scollega WhatsApp
+app.post('/api/whatsapp-reset', (req, res) => {
+  exec(`rm -rf ${pathProgetto}/session/Default && sudo systemctl restart comunicazioni-soci.service`, (err, stdout, stderr) => {
+    if (err) return res.status(500).send('Errore reset WhatsApp: ' + (stderr || err.message));
+    res.send('✅ WhatsApp scollegato. Scannerizza un nuovo QR Code.');
+  });
+});
+
+// ▶️ Server
+app.listen(PORT, () => {
+  console.log(`✅ Server avviato su http://localhost:${PORT}`);
+});
 
 // 🔄 Riavvia Raspberry
 app.post('/api/riavvia', (req, res) => {
