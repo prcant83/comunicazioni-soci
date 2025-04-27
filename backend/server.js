@@ -1,5 +1,4 @@
 // backend/server.js aggiornato definitivo
-
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
@@ -7,6 +6,8 @@ const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const csv = require('csv-parser');
 const { exec } = require('child_process');
+const SerialPort = require('serialport');
+const Readline = require('@serialport/parser-readline');
 const { sendEmail } = require('./email');
 const { startWhatsApp, sendWhatsApp, statoWhatsApp } = require('./whatsapp');
 const { sendSMS } = require('./sms');
@@ -136,7 +137,7 @@ app.put('/rubriche/contatto/:id', (req, res) => {
   });
 });
 
-// 📋 Log Invii
+// 📋 Log
 app.get('/api/log', (req, res) => {
   const { tipo, start, end, limit } = req.query;
   let sql = "SELECT * FROM log_invio";
@@ -217,40 +218,39 @@ app.get('/api/stato/whatsapp-qr', (req, res) => {
   res.json({ pronto: statoWhatsApp.pronto, qrCode: qrCode, errore: statoWhatsApp.errore || null });
 });
 
-// 📶 Stato GSM (lettura gammu monitor 1)
+// 📶 Stato GSM usando AT+CSQ
 app.get('/api/stato/gsm-signal', (req, res) => {
-  let output = '';
-  const child = exec('gammu --monitor 1');
+  const port = new SerialPort('/dev/ttyUSB0', { baudRate: 115200 });
+  const parser = port.pipe(new Readline({ delimiter: '\r\n' }));
 
-  child.stdout.on('data', (data) => {
-    output += data.toString();
-    if (output.includes('Network level')) {
-      const match = output.match(/Signal strength\s*:\s*(-?\d+) dBm[\s\S]*Network level\s*:\s*(\d+)%/i);
+  parser.on('data', (data) => {
+    if (data.includes('+CSQ:')) {
+      const match = data.match(/\+CSQ:\s*(\d+),/);
       if (match) {
-        const segnale_dBm = parseInt(match[1]);
-        const percentuale = parseInt(match[2]);
-        res.json({ segnale_dBm, percentuale, risposta: `📶 Segnale: ${percentuale}% (${segnale_dBm} dBm)` });
+        const csq = parseInt(match[1]);
+        const percentuale = Math.round((csq / 31) * 100);
+        res.json({ segnale_csq: csq, percentuale, risposta: `📶 Segnale: ${percentuale}% (CSQ ${csq})` });
       } else {
-        res.status(500).json({ error: "Impossibile leggere il segnale GSM" });
+        res.status(500).json({ error: "Errore interpretazione segnale GSM" });
       }
-      child.kill();
+      port.close();
     }
   });
 
-  child.stderr.on('data', (data) => {
-    console.error('stderr:', data.toString());
+  port.on('open', () => {
+    port.write('AT+CSQ\r');
   });
 
-  child.on('error', (error) => {
-    console.error('error:', error.message);
-    res.status(500).json({ error: error.message });
+  port.on('error', (err) => {
+    res.status(500).json({ error: 'Errore porta seriale: ' + err.message });
   });
 
-  child.on('exit', (code) => {
-    if (code !== 0 && !res.headersSent) {
-      res.status(500).json({ error: 'Errore esecuzione gammu' });
+  setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Timeout lettura GSM' });
+      port.close();
     }
-  });
+  }, 5000);
 });
 
 // 🔄 Riavvia Raspberry
@@ -277,7 +277,7 @@ app.post('/api/whatsapp-reset', (req, res) => {
   });
 });
 
-// ▶️ Server attivo
+// ▶️ Avvio Server
 app.listen(PORT, () => {
   console.log(`✅ Server avviato su http://localhost:${PORT}`);
 });
