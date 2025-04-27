@@ -1,4 +1,5 @@
-// backend/server.js aggiornato definitivo
+// backend/server.js aggiornato definitivo con cache segnale
+
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
@@ -6,8 +7,8 @@ const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const csv = require('csv-parser');
 const { exec } = require('child_process');
-const SerialPort = require('serialport');
-const Readline = require('@serialport/parser-readline');
+const { SerialPort } = require('serialport');
+const { ReadlineParser } = require('@serialport/parser-readline');
 const { sendEmail } = require('./email');
 const { startWhatsApp, sendWhatsApp, statoWhatsApp } = require('./whatsapp');
 const { sendSMS } = require('./sms');
@@ -218,39 +219,52 @@ app.get('/api/stato/whatsapp-qr', (req, res) => {
   res.json({ pronto: statoWhatsApp.pronto, qrCode: qrCode, errore: statoWhatsApp.errore || null });
 });
 
-// 📶 Stato GSM usando AT+CSQ
-app.get('/api/stato/gsm-signal', (req, res) => {
-  const port = new SerialPort('/dev/ttyUSB0', { baudRate: 115200 });
-  const parser = port.pipe(new Readline({ delimiter: '\r\n' }));
+// 📶 Stato GSM - CACHE
 
-  parser.on('data', (data) => {
-    if (data.includes('+CSQ:')) {
-      const match = data.match(/\+CSQ:\s*(\d+),/);
-      if (match) {
-        const csq = parseInt(match[1]);
-        const percentuale = Math.round((csq / 31) * 100);
-        res.json({ segnale_csq: csq, percentuale, risposta: `📶 Segnale: ${percentuale}% (CSQ ${csq})` });
-      } else {
-        res.status(500).json({ error: "Errore interpretazione segnale GSM" });
+let ultimoSegnaleGSM = { segnale_csq: null, percentuale: null, risposta: '', timestamp: 0 };
+
+function aggiornaSegnaleGSM() {
+  const port = new SerialPort({ path: '/dev/ttyUSB0', baudRate: 115200, autoOpen: false });
+
+  port.open(err => {
+    if (err) {
+      console.error('Errore apertura porta seriale:', err.message);
+      return;
+    }
+
+    const parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+
+    parser.on('data', (line) => {
+      if (line.includes('+CSQ:')) {
+        const match = line.match(/\+CSQ:\s*(\d+),/);
+        if (match) {
+          const csq = parseInt(match[1]);
+          const percentuale = Math.round((csq / 31) * 100);
+          ultimoSegnaleGSM = {
+            segnale_csq: csq,
+            percentuale: percentuale,
+            risposta: `📶 Segnale: ${percentuale}% (CSQ ${csq})`,
+            timestamp: Date.now()
+          };
+        }
+        port.close();
       }
-      port.close();
-    }
-  });
+    });
 
-  port.on('open', () => {
     port.write('AT+CSQ\r');
+    setTimeout(() => port.close(), 5000);
   });
+}
 
-  port.on('error', (err) => {
-    res.status(500).json({ error: 'Errore porta seriale: ' + err.message });
-  });
+aggiornaSegnaleGSM();
+setInterval(aggiornaSegnaleGSM, 30000);
 
-  setTimeout(() => {
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Timeout lettura GSM' });
-      port.close();
-    }
-  }, 5000);
+app.get('/api/stato/gsm-signal', (req, res) => {
+  if (ultimoSegnaleGSM.timestamp > 0) {
+    res.json(ultimoSegnaleGSM);
+  } else {
+    res.status(500).json({ error: 'Segnale GSM non disponibile' });
+  }
 });
 
 // 🔄 Riavvia Raspberry
