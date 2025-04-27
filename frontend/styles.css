@@ -7,7 +7,7 @@ body {
 }
 
 main.container {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   background: white;
   padding: 2em;
@@ -18,6 +18,7 @@ main.container {
 h1.title {
   text-align: center;
   margin-bottom: 1em;
+  font-size: 2em;
 }
 
 h2, h3 {
@@ -78,6 +79,7 @@ th, td {
 
 th {
   background: #f0f0f0;
+  font-weight: bold;
 }
 
 tr:nth-child(even) {
@@ -90,20 +92,48 @@ tr:nth-child(even) {
   grid-template-columns: repeat(7, 1fr);
   gap: 5px;
   margin: 20px auto;
-  max-width: 400px;
+  max-width: 600px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.calendar-header button {
+  padding: 5px 10px;
+  font-size: 1.1em;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.calendar-header span {
+  font-weight: bold;
+  font-size: 1.2em;
+  text-transform: uppercase;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 5px;
 }
 
 .calendar-cell {
-  padding: 8px;
   background: #eee;
+  padding: 10px;
   text-align: center;
   border-radius: 5px;
   cursor: pointer;
-  transition: background 0.3s;
-}
-
-.calendar-cell:hover {
-  background: #d3eaff;
+  font-size: 0.9em;
+  min-height: 40px;
 }
 
 .calendar-cell.has-log {
@@ -111,24 +141,9 @@ tr:nth-child(even) {
   font-weight: bold;
 }
 
-/* Barra di progresso */
-.progress-bar {
-  width: 100%;
-  background-color: #f0f0f0;
-  border-radius: 5px;
-  overflow: hidden;
-  margin-top: 1em;
-  display: none;
-}
-
-.progress-bar-inner {
-  height: 20px;
-  background-color: #25D366;
-  width: 0%;
-  color: white;
-  text-align: center;
-  line-height: 20px;
-  transition: width 0.3s;
+.calendar-cell.empty {
+  background: none;
+  cursor: default;
 }
 
 /* Pulsanti esportazione */
@@ -153,7 +168,7 @@ tr:nth-child(even) {
   background-color: #43a047;
 }
 
-/* Link "Torna alla Home" */
+/* Link \"Torna alla Home\" */
 .back-link {
   display: block;
   text-align: center;
@@ -167,28 +182,6 @@ tr:nth-child(even) {
   color: #0056b3;
 }
 
-/* Lista rubriche */
-.rubrica-lista {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 1em;
-}
-
-.rubrica-item {
-  background-color: #e7f1ff;
-  border: 1px solid #b5d3f3;
-  padding: 0.5em 1em;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.rubrica-item:hover {
-  background-color: #cfe6ff;
-}
-
 /* Stato log e errori */
 .status {
   margin-top: 1em;
@@ -196,7 +189,7 @@ tr:nth-child(even) {
   font-weight: bold;
 }
 
-/* Migliorie mobile */
+/* Mobile friendly */
 @media (max-width: 768px) {
   input, select, textarea, button {
     font-size: 0.9em;
