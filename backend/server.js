@@ -262,33 +262,52 @@ app.get('/api/stato/whatsapp-qr', (req, res) => {
   });
 });
 
-// 📶 Stato GSM - Aspetta fino a 8 secondi l'output di gammu
+// 📶 Stato GSM definitivo
 app.get('/api/stato/gsm-signal', (req, res) => {
-  const child = exec('gammu --monitor 1', { timeout: 8000 }, (error, stdout, stderr) => {
-    if (error) {
-      return res.status(500).json({ error: stderr || error.message });
-    }
+  let stdout = '';
 
-    const match = stdout.match(/Signal strength\s*:\s*(-?\d+) dBm[\s\S]*Network level\s*:\s*(\d+)%/i);
+  const child = exec('gammu --monitor 1');
 
-    if (match) {
-      const segnale_dBm = parseInt(match[1]);
-      const percentuale = parseInt(match[2]);
-      res.json({
-        segnale_dBm,
-        percentuale,
-        risposta: `📶 Segnale: ${percentuale}% (${segnale_dBm} dBm)`
-      });
-    } else {
-      res.status(500).json({ error: "Impossibile leggere il segnale GSM" });
+  child.stdout.on('data', (data) => {
+    stdout += data.toString();
+
+    if (stdout.includes('Network level')) {
+      // abbiamo raccolto tutto quello che ci serve
+      const match = stdout.match(/Signal strength\s*:\s*(-?\d+) dBm[\s\S]*Network level\s*:\s*(\d+)%/i);
+
+      if (match) {
+        const segnale_dBm = parseInt(match[1]);
+        const percentuale = parseInt(match[2]);
+        res.json({
+          segnale_dBm,
+          percentuale,
+          risposta: `📶 Segnale: ${percentuale}% (${segnale_dBm} dBm)`
+        });
+      } else {
+        res.status(500).json({ error: "Impossibile leggere il segnale GSM" });
+      }
+
+      // Uccidiamo il processo subito dopo aver letto
+      child.kill();
     }
   });
 
-  // Termina il processo massimo dopo 8 secondi (di sicurezza)
-  setTimeout(() => {
-    child.kill();
-  }, 8000);
+  child.stderr.on('data', (data) => {
+    console.error('stderr:', data.toString());
+  });
+
+  child.on('error', (error) => {
+    console.error('error:', error.message);
+    res.status(500).json({ error: error.message });
+  });
+
+  child.on('exit', (code) => {
+    if (code !== 0 && !res.headersSent) {
+      res.status(500).json({ error: 'Errore esecuzione gammu' });
+    }
+  });
 });
+
 
 // 🔄 Riavvia Raspberry
 app.post('/api/riavvia', (req, res) => {
