@@ -5,8 +5,98 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Invia SMS</title>
   <link rel="stylesheet" href="styles.css" />
-  <script src="sms.js" defer></script>
+  <script defer>
+    async function caricaRubriche() {
+      const response = await fetch('/rubriche');
+      const rubriche = await response.json();
+      const select = document.getElementById('destinatario');
+      rubriche.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = `📂 Rubrica: ${r}`;
+        select.appendChild(opt);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      caricaRubriche();
+
+      document.getElementById('destinatario').addEventListener('change', (e) => {
+        const numeroSingolo = document.getElementById('numeroSingolo');
+        numeroSingolo.style.display = (e.target.value === '__singolo__') ? 'block' : 'none';
+      });
+
+      document.getElementById('messaggio').addEventListener('input', aggiornaContatore);
+
+      document.getElementById('smsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const esito = document.getElementById('esito');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+
+        esito.textContent = '';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressContainer.style.display = 'block';
+        form.querySelector('button').disabled = true;
+
+        const body = {
+          messaggio: form.messaggio.value.trim(),
+        };
+
+        if (form.destinatario.value === '__singolo__') {
+          const numero = form.numero.value.trim();
+          if (!numero) {
+            alert("Inserisci un numero valido.");
+            form.querySelector('button').disabled = false;
+            return;
+          }
+          body.numero = numero;
+        } else {
+          body.rubrica = form.destinatario.value;
+        }
+
+        try {
+          const response = await fetch('/send-sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+
+          const result = await response.text();
+          progressBar.style.width = '100%';
+          progressBar.textContent = '100%';
+          esito.textContent = response.ok ? `✅ ${result}` : `❌ Errore: ${result}`;
+        } catch (error) {
+          esito.textContent = '❌ Errore di rete o server.';
+        }
+
+        form.querySelector('button').disabled = false;
+      });
+    });
+
+    function aggiornaContatore() {
+      const testo = document.getElementById('messaggio').value;
+      const usaUnicode = /[^\u0000-\u007F]/.test(testo);
+      const lunghezza = testo.length;
+      const limite = usaUnicode ? 70 : 160;
+      const segmento = usaUnicode ? 67 : 153;
+      const smsStimati = lunghezza <= limite ? 1 : Math.ceil(lunghezza / segmento);
+
+      document.getElementById('contatore').innerText = `${lunghezza} caratteri, ${smsStimati} SMS stimati`;
+    }
+  </script>
+
+  <style>
+    .counter {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #555;
+    }
+  </style>
 </head>
+
 <body>
   <main class="container">
     <h1 class="title">📱 Invia SMS (anche lunghi)</h1>
