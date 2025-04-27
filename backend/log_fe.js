@@ -1,5 +1,8 @@
 // backend/log_fe.js
 
+let meseCorrente = new Date().getMonth(); // 0-11
+let annoCorrente = new Date().getFullYear();
+
 async function caricaLog(filtri = {}) {
   const params = new URLSearchParams(filtri);
   const res = await fetch('/api/log?' + params.toString());
@@ -15,10 +18,15 @@ async function caricaLog(filtri = {}) {
   }
 
   dati.forEach(log => {
+    const dataFormattata = new Date(log.data).toLocaleString('it-IT', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${log.id}</td>
-      <td>${log.data}</td>
+      <td>${dataFormattata}</td>
       <td>${log.tipo}</td>
       <td>${log.destinatario}</td>
       <td>${log.rubrica || ''}</td>
@@ -31,21 +39,47 @@ async function caricaLog(filtri = {}) {
 
 async function aggiornaCalendario() {
   const res = await fetch('/api/log/days');
-  const giorni = await res.json();
+  const giorniLog = await res.json(); // array tipo ["2025-04-27", ...]
 
   const calendario = document.getElementById('calendar');
   calendario.innerHTML = '';
 
-  const oggi = new Date();
-  const meseCorrente = oggi.toISOString().slice(0, 7); // es. '2025-04'
+  const intestazione = document.createElement('div');
+  intestazione.className = 'calendar-header';
+  intestazione.innerHTML = `
+    <button onclick="cambiaMese(-1)"><<</button>
+    <span>${new Date(annoCorrente, meseCorrente).toLocaleString('it-IT', { month: 'long', year: 'numeric' }).toUpperCase()}</span>
+    <button onclick="cambiaMese(1)">>></button>
+  `;
+  calendario.appendChild(intestazione);
 
-  for (let giorno = 1; giorno <= 31; giorno++) {
-    const giornoCompleto = `${meseCorrente}-${giorno.toString().padStart(2, '0')}`;
+  const giorniSettimana = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+  const intestazioneGiorni = document.createElement('div');
+  intestazioneGiorni.className = 'calendar-days';
+  giorniSettimana.forEach(g => {
+    const div = document.createElement('div');
+    div.textContent = g;
+    intestazioneGiorni.appendChild(div);
+  });
+  calendario.appendChild(intestazioneGiorni);
+
+  const primoGiornoMese = new Date(annoCorrente, meseCorrente, 1);
+  const giornoSettimana = (primoGiornoMese.getDay() + 6) % 7; // 0=lunedì
+  const giorniNelMese = new Date(annoCorrente, meseCorrente + 1, 0).getDate();
+
+  for (let i = 0; i < giornoSettimana; i++) {
+    const div = document.createElement('div');
+    div.className = 'calendar-cell empty';
+    calendario.appendChild(div);
+  }
+
+  for (let giorno = 1; giorno <= giorniNelMese; giorno++) {
+    const giornoCompleto = `${annoCorrente}-${(meseCorrente + 1).toString().padStart(2, '0')}-${giorno.toString().padStart(2, '0')}`;
     const cella = document.createElement('div');
     cella.className = 'calendar-cell';
     cella.textContent = giorno;
 
-    if (giorni.includes(giornoCompleto)) {
+    if (giorniLog.includes(giornoCompleto)) {
       cella.classList.add('has-log');
     }
 
@@ -57,6 +91,19 @@ async function aggiornaCalendario() {
 
     calendario.appendChild(cella);
   }
+}
+
+function cambiaMese(delta) {
+  meseCorrente += delta;
+  if (meseCorrente < 0) {
+    meseCorrente = 11;
+    annoCorrente--;
+  }
+  if (meseCorrente > 11) {
+    meseCorrente = 0;
+    annoCorrente++;
+  }
+  aggiornaCalendario();
 }
 
 function filtraLog() {
@@ -87,7 +134,6 @@ function esportaPDF() {
   doc.save(`log_invii_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
-
 function esportaCSV() {
   let csv = 'ID,Data,Tipo,Destinatario,Rubrica,Messaggio,Allegato\n';
   const righe = document.querySelectorAll('#logTableBody tr');
@@ -110,4 +156,3 @@ window.addEventListener('DOMContentLoaded', async () => {
   await caricaLog({ start: oggi, end: oggi });
   await aggiornaCalendario();
 });
-
