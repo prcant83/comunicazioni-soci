@@ -6,7 +6,7 @@ async function aggiornaStato() {
   const log = document.getElementById('log');
 
   try {
-    // QR WhatsApp
+    // Stato WhatsApp
     const qrRes = await fetch('/api/stato/whatsapp-qr');
     const qrJson = await qrRes.json();
     if (qrJson.pronto) {
@@ -17,14 +17,14 @@ async function aggiornaStato() {
       qr.innerHTML = `<p style="color:red;">❌ WhatsApp non connesso</p>`;
     }
 
-    // Segnale GSM (aggiornato)
+    // Stato GSM
     const gsmRes = await fetch('/api/stato/gsm-signal');
     const gsmJson = await gsmRes.json();
 
     if (gsmJson.percentuale !== undefined) {
       segnale.textContent = gsmJson.risposta;
-
       tacche.innerHTML = '';
+
       let numTacche = 0;
       if (gsmJson.percentuale > 80) numTacche = 5;
       else if (gsmJson.percentuale > 60) numTacche = 4;
@@ -39,8 +39,8 @@ async function aggiornaStato() {
         barra.style.width = '15px';
         barra.style.height = `${i * 5 + 10}px`;
         barra.style.margin = '0 2px';
+        barra.style.borderRadius = '3px';
         barra.style.backgroundColor = (i <= numTacche) ? '#25D366' : '#ddd';
-        barra.style.borderRadius = '2px';
         tacche.appendChild(barra);
       }
 
@@ -52,7 +52,7 @@ async function aggiornaStato() {
       sim.textContent = '❌ SIM800C non rilevato';
     }
 
-    // Log ultimi 10
+    // Ultimi Log
     const logRes = await fetch('/api/log?limit=10');
     const logs = await logRes.json();
     log.innerHTML = logs.length
@@ -62,8 +62,8 @@ async function aggiornaStato() {
   } catch (err) {
     qr.innerHTML = '<p style="color:red;">Errore QR.</p>';
     segnale.textContent = 'Errore GSM.';
-    sim.textContent = 'Errore lettura modulo.';
     tacche.innerHTML = '';
+    sim.textContent = 'Errore modulo SIM.';
     log.innerHTML = '<li>Errore caricamento log.</li>';
   }
 }
@@ -78,7 +78,7 @@ function riavviaSistema() {
 }
 
 function aggiornaSistema() {
-  if (confirm('Vuoi procedere con l\'intero setup (aggiornamento completo)?')) {
+  if (confirm('Vuoi procedere con l\'aggiornamento completo?')) {
     fetch('/api/aggiorna', { method: 'POST' })
       .then(res => res.text())
       .then(alert)
@@ -87,7 +87,7 @@ function aggiornaSistema() {
 }
 
 function resettaWhatsApp() {
-  if (confirm('Vuoi scollegare WhatsApp e resettare la sessione? (richiederà una nuova scansione QR)')) {
+  if (confirm('Vuoi scollegare WhatsApp? (richiederà una nuova scansione QR)')) {
     fetch('/api/whatsapp-reset', { method: 'POST' })
       .then(res => res.text())
       .then(alert)
@@ -95,9 +95,7 @@ function resettaWhatsApp() {
   }
 }
 
-// Avvia l'aggiornamento periodico dello stato
-
 document.addEventListener('DOMContentLoaded', () => {
   aggiornaStato();
-  setInterval(aggiornaStato, 10000); // aggiornamento ogni 10 secondi
+  setInterval(aggiornaStato, 10000); // aggiorna ogni 10 secondi
 });
