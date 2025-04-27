@@ -262,13 +262,27 @@ app.get('/api/stato/whatsapp-qr', (req, res) => {
   });
 });
 
-// 📶 Stato GSM
+// 📶 Stato GSM aggiornato (mostra qualità segnale precisa)
 app.get('/api/stato/gsm-signal', (req, res) => {
-  exec('gammu --identify', (err, stdout, stderr) => {
-    if (err) return res.json({ risposta: 'Errore: ' + (stderr || err.message) });
-    return res.json({ risposta: stdout.trim() });
+  exec('gammu --monitor 1', (error, stdout, stderr) => {
+    if (error) return res.status(500).json({ error: stderr });
+
+    const match = stdout.match(/Signal strength\s*:\s*(-?\d+) dBm[\s\S]*Network level\s*:\s*(\d+)%/i);
+
+    if (match) {
+      const segnale_dBm = parseInt(match[1]);
+      const percentuale = parseInt(match[2]);
+      res.json({ 
+        segnale_dBm, 
+        percentuale,
+        risposta: `📶 Segnale: ${percentuale}% (${segnale_dBm} dBm)`
+      });
+    } else {
+      res.status(500).json({ error: "Impossibile leggere il segnale GSM" });
+    }
   });
 });
+
 
 // 🔄 Riavvia Raspberry
 app.post('/api/riavvia', (req, res) => {
