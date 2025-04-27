@@ -41,6 +41,10 @@ rm -rf node_modules package-lock.json
 echo "📦 Installazione moduli Node.js..."
 npm install
 
+# Installa qrcode-terminal (specifico)
+echo "📦 Installazione modulo qrcode-terminal..."
+npm install --save qrcode-terminal
+
 # File .env
 if [ ! -f ".env" ]; then
   echo "🛠️  Creazione file .env con valori di esempio..."
