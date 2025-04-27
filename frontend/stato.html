@@ -28,18 +28,22 @@
       margin: 10px auto;
       display: block;
     }
-    #taccheSegnale {
-      margin: 10px 0;
-      display: flex;
-      justify-content: center;
-      gap: 5px;
-    }
-    .tacca {
-      width: 15px;
-      background-color: #ccc;
-      border-radius: 3px;
-      transition: all 0.3s;
-    }
+  #taccheSegnale {
+  margin: 10px 0;
+  display: flex;
+  align-items: flex-end; /* allinea le tacche in basso */
+  justify-content: center;
+  gap: 5px;
+  height: 50px; /* contenitore più alto */
+}
+
+.tacca {
+  width: 12px;
+  background-color: #ccc;
+  border-radius: 3px;
+  transition: all 0.3s;
+}
+
     /* Ottimizzazione visuale dei log */
     #log {
       list-style-type: none;
